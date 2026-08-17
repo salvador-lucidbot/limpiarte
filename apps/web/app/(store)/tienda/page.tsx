@@ -3,6 +3,8 @@ import { CatalogFilters, CatalogSort } from "../../../components/store/catalog-f
 import { ProductCardView } from "../../../components/store/product-card-view";
 import { apiFetch } from "../../../lib/api/client";
 import { CategoryNode, Paginated, ProductCard } from "../../../lib/api/types";
+import { demoCatalogPage, demoCategories } from "../../../lib/demo/demo-catalog";
+import { isDemoMode } from "../../../lib/demo/demo-mode";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -34,6 +36,9 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
   } catch {
     void 0;
   }
+
+  if (products.data.length === 0 && isDemoMode()) products = demoCatalogPage(query);
+  if (categories.length === 0 && isDemoMode()) categories = demoCategories();
 
   const activeCategory = firstValue(params.category);
   const categoryData = activeCategory

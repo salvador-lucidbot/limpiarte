@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAdminAuth } from "../../../lib/auth/admin-auth-context";
+import { isDemoMode } from "../../../lib/demo/demo-mode";
 
 export default function AdminLoginPage(): React.ReactNode {
-  const { loginStep1, loginStep2 } = useAdminAuth();
+  const { loginStep1, loginStep2, loginDemo } = useAdminAuth();
+  const demoAvailable = isDemoMode();
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState("");
@@ -97,6 +99,24 @@ export default function AdminLoginPage(): React.ReactNode {
               ← Volver
             </button>
           </form>
+        )}
+
+        {demoAvailable && (
+          <div className="mt-6 border-t border-stone-200 pt-6">
+            <button
+              type="button"
+              onClick={() => {
+                loginDemo();
+                router.push("/admin/dashboard");
+              }}
+              className="w-full rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 px-6 py-3 font-semibold text-amber-800 transition hover:bg-amber-100"
+            >
+              👁️ Entrar en modo demostración
+            </button>
+            <p className="mt-2 text-center text-xs text-stone-400">
+              Recorre el panel con datos de ejemplo, sin base de datos. Solo disponible en desarrollo.
+            </p>
+          </div>
         )}
       </div>
     </main>

@@ -1,5 +1,7 @@
 import { apiFetch } from "../../lib/api/client";
 import { CategoryNode } from "../../lib/api/types";
+import { demoCategories } from "../../lib/demo/demo-catalog";
+import { isDemoMode } from "../../lib/demo/demo-mode";
 import { CustomerAuthProvider } from "../../lib/auth/customer-auth-context";
 import { CartProvider } from "../../lib/cart/cart-context";
 import { StoreFooter } from "../../components/store/store-footer";
@@ -7,8 +9,11 @@ import { StoreHeader } from "../../components/store/store-header";
 
 async function loadCategories(): Promise<CategoryNode[]> {
   try {
-    return await apiFetch<CategoryNode[]>("/catalog/categories", { revalidate: 300 });
+    const categories = await apiFetch<CategoryNode[]>("/catalog/categories", { revalidate: 300 });
+    if (categories.length === 0 && isDemoMode()) return demoCategories();
+    return categories;
   } catch {
+    if (isDemoMode()) return demoCategories();
     return [];
   }
 }

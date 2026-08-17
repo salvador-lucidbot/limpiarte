@@ -29,7 +29,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export default function AdminPanelLayout({ children }: { children: React.ReactNode }): React.ReactNode {
-  const { user, ready, hasPermission, logout } = useAdminAuth();
+  const { user, ready, hasPermission, logout, isDemo } = useAdminAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -78,7 +78,17 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
         </div>
       </aside>
 
-      <div className="ml-60 flex-1 p-8">{children}</div>
+      <div className="ml-60 flex-1">
+        {isDemo && (
+          <div className="flex flex-wrap items-center justify-center gap-2 bg-amber-400 px-4 py-2 text-center text-sm font-medium text-amber-950">
+            <span>👁️ Modo demostración — datos de ejemplo. Los cambios no se guardan.</span>
+            <button type="button" onClick={logout} className="underline hover:no-underline">
+              Salir del modo demo
+            </button>
+          </div>
+        )}
+        <div className="p-8">{children}</div>
+      </div>
     </div>
   );
 }

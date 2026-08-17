@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../api/client";
 import { useAdminAuth } from "../auth/admin-auth-context";
+import { demoAdminData } from "../demo/demo-admin";
 
 interface AdminGetState<T> {
   data: T | null;
@@ -12,13 +13,22 @@ interface AdminGetState<T> {
 }
 
 export function useAdminGet<T>(path: string | null): AdminGetState<T> {
-  const { token, logout } = useAdminAuth();
+  const { token, logout, isDemo } = useAdminAuth();
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async (): Promise<void> => {
     if (!token || !path) return;
+
+    if (isDemo) {
+      const demoResult = demoAdminData(path);
+      setData(demoResult === undefined ? null : (demoResult as T));
+      setLoading(false);
+      setError(demoResult === undefined ? "Sin datos de demostración para esta vista" : null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -30,7 +40,7 @@ export function useAdminGet<T>(path: string | null): AdminGetState<T> {
     } finally {
       setLoading(false);
     }
-  }, [logout, path, token]);
+  }, [isDemo, logout, path, token]);
 
   useEffect(() => {
     void reload();
@@ -40,11 +50,13 @@ export function useAdminGet<T>(path: string | null): AdminGetState<T> {
 }
 
 export function useAdminRequest(): <T>(path: string, method: "POST" | "PUT" | "DELETE", body?: unknown) => Promise<T> {
-  const { token } = useAdminAuth();
+  const { token, isDemo } = useAdminAuth();
 
   return useCallback(
-    <T,>(path: string, method: "POST" | "PUT" | "DELETE", body?: unknown): Promise<T> =>
-      apiFetch<T>(path, { method, body, token, revalidate: false }),
-    [token]
+    <T,>(path: string, method: "POST" | "PUT" | "DELETE", body?: unknown): Promise<T> => {
+      if (isDemo) return Promise.reject(new Error("Modo demostración: los cambios no se guardan"));
+      return apiFetch<T>(path, { method, body, token, revalidate: false });
+    },
+    [isDemo, token]
   );
 }

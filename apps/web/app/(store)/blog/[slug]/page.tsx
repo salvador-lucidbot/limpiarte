@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ApiError, apiFetch } from "../../../../lib/api/client";
 import { BlogPostView } from "../../../../lib/api/types";
+import { demoBlogPost } from "../../../../lib/demo/demo-catalog";
+import { isDemoMode } from "../../../../lib/demo/demo-mode";
 
 type Params = Promise<{ slug: string }>;
 
@@ -9,6 +11,7 @@ async function loadPost(slug: string): Promise<BlogPostView | null> {
   try {
     return await apiFetch<BlogPostView>(`/content/blog/${slug}`, { revalidate: 300 });
   } catch (error) {
+    if (isDemoMode()) return demoBlogPost(slug);
     if (error instanceof ApiError && error.statusCode === 404) return null;
     throw error;
   }

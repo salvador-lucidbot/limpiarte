@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { apiFetch } from "../../../lib/api/client";
 import { BlogPostView, Paginated } from "../../../lib/api/types";
+import { demoBlogPosts } from "../../../lib/demo/demo-catalog";
+import { isDemoMode } from "../../../lib/demo/demo-mode";
 
 export const metadata: Metadata = { title: "Blog" };
 
@@ -12,6 +14,8 @@ export default async function BlogPage(): Promise<React.ReactNode> {
   } catch {
     void 0;
   }
+
+  if (posts.data.length === 0 && isDemoMode()) posts = demoBlogPosts();
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">

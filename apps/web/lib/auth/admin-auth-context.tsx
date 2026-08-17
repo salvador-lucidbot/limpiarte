@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../api/client";
 import { StaffSession } from "../api/types";
+import { DEMO_STAFF_USER } from "../demo/demo-admin";
+import { DEMO_TOKEN, isDemoMode } from "../demo/demo-mode";
 
 const TOKEN_KEY = "limpiarte_admin_token";
 const USER_KEY = "limpiarte_admin_user";
@@ -12,9 +14,11 @@ interface AdminAuthValue {
   token: string | null;
   user: StaffSession["user"] | null;
   ready: boolean;
+  isDemo: boolean;
   hasPermission: (permission: string) => boolean;
   loginStep1: (email: string, password: string) => Promise<string>;
   loginStep2: (ticket: string, code: string) => Promise<void>;
+  loginDemo: () => void;
   logout: () => void;
 }
 
@@ -53,6 +57,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): ReactN
       token,
       user,
       ready,
+      isDemo: token === DEMO_TOKEN,
       hasPermission: (permission) => {
         if (!user) return false;
         if (user.isSuperadmin) return true;
@@ -76,6 +81,13 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): ReactN
         window.localStorage.setItem(USER_KEY, JSON.stringify(session.user));
         setToken(session.accessToken);
         setUser(session.user);
+      },
+      loginDemo: () => {
+        if (!isDemoMode()) return;
+        window.localStorage.setItem(TOKEN_KEY, DEMO_TOKEN);
+        window.localStorage.setItem(USER_KEY, JSON.stringify(DEMO_STAFF_USER));
+        setToken(DEMO_TOKEN);
+        setUser(DEMO_STAFF_USER);
       },
       logout
     }),
