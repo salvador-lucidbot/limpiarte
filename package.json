@@ -1,0 +1,22 @@
+{
+  "name": "limpiarte-ecommerce",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.5.3",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "dev:api": "pnpm --filter @limpiarte/api dev",
+    "dev:web": "pnpm --filter @limpiarte/web dev",
+    "build": "pnpm --filter @limpiarte/api build && pnpm --filter @limpiarte/web build",
+    "start:api": "pnpm --filter @limpiarte/api start:prod",
+    "start:web": "pnpm --filter @limpiarte/web start",
+    "db:generate": "pnpm --filter @limpiarte/api db:generate",
+    "db:migrate": "pnpm --filter @limpiarte/api db:migrate",
+    "db:deploy": "pnpm --filter @limpiarte/api db:deploy",
+    "db:seed": "pnpm --filter @limpiarte/api db:seed",
+    "lint": "pnpm -r lint"
+  }
+}

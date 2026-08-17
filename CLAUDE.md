@@ -1,0 +1,44 @@
+# Limpiarte E-commerce — Documentación técnica interna
+
+## Stack real (no migrar)
+
+- Monorepo **pnpm 11** (`node-linker=hoisted` en `.npmrc` por Windows/OneDrive). Node ≥ 22.
+- `apps/api`: **NestJS 11**, TypeScript 5.9, CommonJS, sin passport (JWT manual con `@nestjs/jwt`).
+- `apps/web`: **Next.js 16** App Router (params/searchParams son `Promise`, se hace `await`), React 19, **Tailwind CSS 4** (tokens en `@theme` de `app/globals.css`, sin tailwind.config).
+- **Prisma 7**: requiere `prisma.config.ts` (datasource url ahí, NO en el schema) y driver adapter `@prisma/adapter-mariadb`. Generator `prisma-client` emite TypeScript en `apps/api/src/generated/prisma/` (gitignored — ejecutar `pnpm db:generate` tras clonar). Todo se importa desde `src/generated/prisma/client`.
+- `DATABASE_URL` se parsea con `new URL()` en `prisma.service.ts` y `prisma/seed.ts` para construir el adapter.
+
+## Arquitectura API
+
+- Prefijo global `api/v1`. Swagger en `/docs` (solo fuera de producción). `rawBody: true` en bootstrap para el webhook de Stripe.
+- Guards globales (en orden): Throttler → `AuthGuard` → `PermissionsGuard`.
+  - `@Public()` abre el endpoint (igual adjunta el principal si llega token — usado por carrito/checkout para clientes logueados).
+  - `@CustomerOnly()` exige JWT `kind: "customer"`.
+  - Sin decorador = staff. `@RequirePermissions("x.y")` valida contra rol + overrides; Superadmin (flag en User) omite todo.
+- JWT único con payload `{ sub, kind: "staff" | "customer" | "two_factor" }`. Login staff = 2 pasos (password → código 6 dígitos por correo, ticket JWT de 10 min). Lockout: 5 intentos → 15 min.
+- Módulos `@Global()`: Prisma, Security (AES-256-GCM con `ENCRYPTION_KEY`), Mail, Audit, LucidBot, Auth.
+- Dinero: `Decimal(12,2)` en DB; en lógica se convierte con `Number()` y se redondea a 2 decimales (COP). Los Decimal serializan como string en JSON — el front usa `formatCOP(number | string)`.
+- Precios: SIEMPRE vía `PricingService` (promo con ventana, precio de variante, `PriceListEntry` por volumen). No leer `basePrice` directo para vender.
+- Inventario: se descuenta al pasar a `PAYMENT_CONFIRMED` (idempotente por `InventoryMovement` con `reference = orderNumber`); se restaura en CANCELLED/REFUNDED.
+- Transiciones de pedido en `ALLOWED_TRANSITIONS` (orders.service.ts). SHIPPED exige guía; CANCELLED/REFUNDED exigen motivo.
+- LucidBot: `LucidBotService.dispatch(eventType, payload, orderId?)` — no lanza si la conexión está inactiva o el evento deshabilitado. Crons: reintentos de fallidos y detección de carritos abandonados cada 10 min (`@nestjs/schedule`).
+- Carritos: token de sesión aleatorio (`sessionToken`), unicidad de ítem manejada en código (MySQL permite múltiples NULL en unique con `variantId`).
+
+## Frontend
+
+- `(store)` = storefront con `StoreLayout` (server) que carga categorías/settings y monta `CustomerAuthProvider` + `CartProvider` (tokens en `localStorage`: `limpiarte_cart_token`, `limpiarte_customer_token`).
+- `/admin` fuera del route group: login propio y `(panel)` con sidebar filtrado por permisos (`useAdminAuth.hasPermission`). Datos vía `useAdminGet`/`useAdminRequest`.
+- Checkout: crea pedido → si Stripe configurado renderiza `PaymentElement` con `clientSecret`; si no, flujo manual. Resultado en `/checkout/resultado` (lee `redirect_status`).
+- `apiFetch` (lib/api/client.ts): `revalidate: false` = no-store (todo lo autenticado); default 60 s para catálogo público.
+
+## Credenciales de desarrollo
+
+- Seed: superadmin `superadmin@limpiarte.local` / `Limpiarte2026!` (sobrescribible con `SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD`). Cambiar en producción.
+- El 2FA llega por correo: sin SMTP configurado el código solo queda en el hash — configura SMTP antes de probar login admin, o toma el código del log si agregas trazas temporales.
+
+## Pendientes conocidos
+
+- Migración inicial de Prisma aún no generada (requiere MySQL accesible): `pnpm db:migrate` la crea.
+- Sección "clientes/[id]" del admin y detalle de contacto: API lista (`GET /admin/customers/:id`, `/contact/admin`), UI pendiente.
+- Subida de imágenes es por URL; no hay almacenamiento de archivos propio (decisión: usar CDN/hosting de imágenes del cliente).
+- Copias de seguridad programadas de DB: responsabilidad del hosting (Hostinger) — documentado en cotización B.6.
