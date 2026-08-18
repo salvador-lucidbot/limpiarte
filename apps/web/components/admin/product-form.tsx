@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
+import { IconX } from "../icons";
 import { Button, Card, Field, inputClass } from "./ui";
 
 export interface ProductFormOption {
@@ -280,9 +281,7 @@ export function ProductForm({ value, onChange, categories, brands, onSubmit, sub
                 onChange={(event) => set("images", value.images.map((current, i) => (i === index ? event.target.value : current)))}
                 className={inputClass}
               />
-              <Button type="button" variant="ghost" onClick={() => set("images", value.images.filter((_, i) => i !== index))}>
-                ✕
-              </Button>
+              <Button type="button" variant="ghost" onClick={() => set("images", value.images.filter((_, i) => i !== index))}><IconX size={15} /></Button>
             </div>
           ))}
           <div className="flex gap-2">
@@ -342,9 +341,7 @@ export function ProductForm({ value, onChange, categories, brands, onSubmit, sub
                   />
                 </Field>
               </div>
-              <Button type="button" variant="ghost" onClick={() => set("options", value.options.filter((_, i) => i !== optionIndex))}>
-                ✕
-              </Button>
+              <Button type="button" variant="ghost" onClick={() => set("options", value.options.filter((_, i) => i !== optionIndex))}><IconX size={15} /></Button>
             </div>
           ))}
 
@@ -461,9 +458,7 @@ export function ProductForm({ value, onChange, categories, brands, onSubmit, sub
                   className={inputClass}
                 />
               </div>
-              <Button type="button" variant="ghost" onClick={() => set("faqs", value.faqs.filter((_, i) => i !== faqIndex))}>
-                ✕
-              </Button>
+              <Button type="button" variant="ghost" onClick={() => set("faqs", value.faqs.filter((_, i) => i !== faqIndex))}><IconX size={15} /></Button>
             </div>
           ))}
           {value.faqs.length === 0 && <p className="text-sm text-stone-400">Sin preguntas frecuentes.</p>}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { IconDroplets } from "../../../../components/icons";
 import { ProductCardView } from "../../../../components/store/product-card-view";
 import { ProductPurchasePanel } from "../../../../components/store/product-purchase-panel";
 import { ApiError, apiFetch } from "../../../../lib/api/client";
@@ -88,7 +89,9 @@ export default async function ProductPage({ params }: { params: Params }): Promi
             {product.images[0] ? (
               <img src={product.images[0].url} alt={product.images[0].alt ?? product.name} className="aspect-square w-full object-cover" />
             ) : (
-              <div className="flex aspect-square items-center justify-center text-6xl text-stone-300">🧴</div>
+              <div className="flex aspect-square items-center justify-center bg-gradient-to-b from-brand-50 to-slate-50 text-brand-200">
+                <IconDroplets size={110} strokeWidth={1} />
+              </div>
             )}
           </div>
           {product.images.length > 1 && (

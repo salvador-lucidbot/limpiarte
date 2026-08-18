@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { IconEye } from "../../../components/icons";
+import { Logo } from "../../../components/logo";
 import { useAdminAuth } from "../../../lib/auth/admin-auth-context";
 import { isDemoMode } from "../../../lib/demo/demo-mode";
 
@@ -51,8 +53,10 @@ export default function AdminLoginPage(): React.ReactNode {
   return (
     <main className="flex min-h-screen items-center justify-center bg-navy-900 px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl">
-        <p className="text-center text-2xl font-bold text-brand-700">✨ Limpiarte</p>
-        <p className="mb-8 text-center text-sm text-stone-500">Panel de administración</p>
+        <div className="flex justify-center">
+          <Logo height={34} />
+        </div>
+        <p className="mb-8 mt-2 text-center text-sm text-stone-500">Panel de administración</p>
 
         {step === 1 ? (
           <form onSubmit={(event) => void submitStep1(event)} className="space-y-4">
@@ -109,9 +113,10 @@ export default function AdminLoginPage(): React.ReactNode {
                 loginDemo();
                 router.push("/admin/dashboard");
               }}
-              className="w-full rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 px-6 py-3 font-semibold text-amber-800 transition hover:bg-amber-100"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 px-6 py-3 font-semibold text-amber-800 transition hover:bg-amber-100"
             >
-              👁️ Entrar en modo demostración
+              <IconEye size={18} />
+              Entrar en modo demostración
             </button>
             <p className="mt-2 text-center text-xs text-stone-400">
               Recorre el panel con datos de ejemplo, sin base de datos. Solo disponible en desarrollo.

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
+import { IconCheckCircle, IconPause, IconPencil, IconPlay, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 import { slugify } from "../../../../components/admin/product-form";
 
@@ -96,7 +97,13 @@ export default function CategoriesAdminPage(): React.ReactNode {
                   </td>
                   <td className="px-3 py-2 text-stone-500">{category.slug}</td>
                   <td className="px-3 py-2">{category._count.products}</td>
-                  <td className="px-3 py-2">{category.isActive ? "✅" : "⏸"}</td>
+                  <td className="px-3 py-2">
+                    {category.isActive ? (
+                      <IconCheckCircle size={16} className="text-emerald-500" />
+                    ) : (
+                      <IconPause size={16} className="text-stone-400" />
+                    )}
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex gap-1">
                       <Button
@@ -112,13 +119,13 @@ export default function CategoriesAdminPage(): React.ReactNode {
                           });
                         }}
                       >
-                        ✏️
+                        <IconPencil size={15} />
                       </Button>
                       <Button variant="ghost" onClick={() => void toggleActive(category)}>
-                        {category.isActive ? "⏸" : "▶"}
+                        {category.isActive ? <IconPause size={15} /> : <IconPlay size={15} />}
                       </Button>
                       <Button variant="ghost" onClick={() => void remove(category.id)}>
-                        🗑
+                        <IconTrash size={15} />
                       </Button>
                     </div>
                   </td>
@@ -192,7 +199,7 @@ export default function CategoriesAdminPage(): React.ReactNode {
                         .catch((error: unknown) => window.alert(error instanceof Error ? error.message : "Error"));
                     }}
                   >
-                    🗑
+                    <IconTrash size={15} />
                   </Button>
                 </li>
               ))}

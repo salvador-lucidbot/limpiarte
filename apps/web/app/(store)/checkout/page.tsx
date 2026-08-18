@@ -5,6 +5,7 @@ import { loadStripe, Stripe } from "@stripe/stripe-js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { IconCheckCircle, IconLock, IconStore, IconTruck } from "../../../components/icons";
 import { apiFetch } from "../../../lib/api/client";
 import { CheckoutResponse } from "../../../lib/api/types";
 import { useCustomerAuth } from "../../../lib/auth/customer-auth-context";
@@ -272,11 +273,12 @@ export default function CheckoutPage(): React.ReactNode {
                   key={method}
                   type="button"
                   onClick={() => update("shippingMethod", method)}
-                  className={`rounded-xl border px-5 py-3 text-sm font-medium ${
-                    form.shippingMethod === method ? "border-brand-600 bg-brand-50 text-brand-700" : "border-stone-300 text-stone-600"
+                  className={`flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-medium transition ${
+                    form.shippingMethod === method ? "border-brand-500 bg-brand-50 text-brand-700" : "border-stone-300 text-stone-600 hover:border-stone-400"
                   }`}
                 >
-                  {method === "DELIVERY" ? "🚚 Envío a domicilio" : "🏬 Recoger en sede"}
+                  {method === "DELIVERY" ? <IconTruck size={18} /> : <IconStore size={18} />}
+                  {method === "DELIVERY" ? "Envío a domicilio" : "Recoger en sede"}
                 </button>
               ))}
             </div>
@@ -328,8 +330,9 @@ export default function CheckoutPage(): React.ReactNode {
               </p>
             )}
             {form.shippingMethod === "DELIVERY" && quote?.available && (
-              <p className="mt-3 rounded-lg bg-brand-50 px-4 py-2 text-sm text-brand-800">
-                {quote.freeShipping ? "🎉 ¡Tu envío es gratis!" : `Costo de envío: ${formatCOP(quote.rate)}`}
+              <p className="mt-3 flex items-center gap-2 rounded-lg bg-brand-50 px-4 py-2 text-sm text-brand-800">
+                <IconCheckCircle size={16} className="shrink-0" />
+                {quote.freeShipping ? "¡Tu envío es gratis!" : `Costo de envío: ${formatCOP(quote.rate)}`}
               </p>
             )}
           </section>
@@ -423,7 +426,10 @@ export default function CheckoutPage(): React.ReactNode {
           >
             {submitting ? "Creando pedido…" : "Continuar al pago"}
           </button>
-          <p className="text-center text-xs text-stone-400">🔒 Pago procesado de forma segura</p>
+          <p className="flex items-center justify-center gap-1.5 text-center text-xs text-stone-400">
+            <IconLock size={13} />
+            Pago procesado de forma segura
+          </p>
         </aside>
       </form>
     </div>

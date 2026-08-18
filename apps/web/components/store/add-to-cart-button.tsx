@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useCart } from "../../lib/cart/cart-context";
+import { IconCart, IconCheck } from "../icons";
 
 interface AddToCartButtonProps {
   productId: string;
@@ -29,16 +30,37 @@ export function AddToCartButton({ productId, variantId = null, quantity = 1, dis
     }
   }
 
-  const baseClass = compact
-    ? "rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-50"
-    : "w-full rounded-xl bg-brand-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50";
+  if (compact) {
+    return (
+      <button
+        type="button"
+        onClick={() => void handleClick()}
+        disabled={disabled || loading}
+        aria-label="Agregar al carrito"
+        title="Agregar al carrito"
+        className={`flex h-9 w-9 items-center justify-center rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-40 ${
+          feedback === "added"
+            ? "border-emerald-500 bg-emerald-50 text-emerald-600"
+            : "border-brand-200 bg-brand-50 text-brand-600 hover:border-brand-500 hover:bg-brand-500 hover:text-white"
+        }`}
+      >
+        {feedback === "added" ? <IconCheck size={17} /> : <IconCart size={17} />}
+      </button>
+    );
+  }
 
   return (
-    <div className={compact ? "" : "space-y-2"}>
-      <button type="button" onClick={() => void handleClick()} disabled={disabled || loading} className={baseClass}>
-        {feedback === "added" ? "✓ Agregado" : compact ? "Agregar" : "Agregar al carrito"}
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => void handleClick()}
+        disabled={disabled || loading}
+        className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-6 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {feedback === "added" ? <IconCheck size={20} /> : <IconCart size={20} />}
+        {feedback === "added" ? "Agregado al carrito" : "Agregar al carrito"}
       </button>
-      {feedback === "error" && errorMessage && !compact && <p className="text-sm text-red-600">{errorMessage}</p>}
+      {feedback === "error" && errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
     </div>
   );
 }

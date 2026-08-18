@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { IconRefresh, IconTruck } from "../../../../../components/icons";
 import { apiFetch } from "../../../../../lib/api/client";
 import { ORDER_STATUS_LABELS, OrderView } from "../../../../../lib/api/types";
 import { useCustomerAuth } from "../../../../../lib/auth/customer-auth-context";
@@ -64,16 +65,20 @@ export default function CustomerOrderDetailPage(): React.ReactNode {
             type="button"
             onClick={() => void reorder()}
             disabled={reordering}
-            className="rounded-lg bg-navy-900 px-4 py-2 text-sm font-medium text-white hover:bg-navy-800 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-navy-900 px-4 py-2 text-sm font-medium text-white hover:bg-navy-800 disabled:opacity-50"
           >
-            {reordering ? "Agregando…" : "🔁 Repetir pedido"}
+            <IconRefresh size={15} />
+            {reordering ? "Agregando…" : "Repetir pedido"}
           </button>
         </div>
       </div>
 
       {order.trackingNumber && (
         <div className="mt-6 rounded-2xl bg-brand-50 p-5">
-          <p className="font-semibold text-brand-800">📦 Envío en camino</p>
+          <p className="flex items-center gap-2 font-semibold text-brand-800">
+            <IconTruck size={18} />
+            Envío en camino
+          </p>
           <p className="mt-1 text-sm text-stone-700">
             Transportadora: <strong>{order.carrier ?? "—"}</strong> · Guía: <strong>{order.trackingNumber}</strong>
           </p>

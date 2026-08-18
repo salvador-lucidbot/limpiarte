@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Badge, Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
+import { IconPause, IconPencil, IconPlay, IconShieldCheck, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 import { Paginated } from "../../../../lib/api/types";
 
@@ -105,8 +106,9 @@ function UsersTab(): React.ReactNode {
             {users.data.map((user) => (
               <tr key={user.id} className="border-b border-stone-50">
                 <td className="px-3 py-2">
-                  <p className="font-medium text-navy-900">
-                    {user.firstName} {user.lastName} {user.isSuperadmin && "👑"}
+                  <p className="flex items-center gap-1.5 font-medium text-navy-900">
+                    {user.firstName} {user.lastName}
+                    {user.isSuperadmin && <IconShieldCheck size={15} className="text-amber-500" />}
                   </p>
                   <p className="text-xs text-stone-400">{user.email}</p>
                 </td>
@@ -116,10 +118,10 @@ function UsersTab(): React.ReactNode {
                   {!user.isSuperadmin && (
                     <div className="flex gap-1">
                       <Button variant="ghost" title={user.isActive ? "Suspender" : "Reactivar"} onClick={() => void toggleActive(user)}>
-                        {user.isActive ? "⏸" : "▶"}
+                        {user.isActive ? <IconPause size={15} /> : <IconPlay size={15} />}
                       </Button>
                       <Button variant="ghost" onClick={() => void remove(user.id)}>
-                        🗑
+                        <IconTrash size={15} />
                       </Button>
                     </div>
                   )}
@@ -224,7 +226,7 @@ function RolesTab(): React.ReactNode {
                         });
                       }}
                     >
-                      ✏️
+                      <IconPencil size={15} />
                     </Button>
                     {!role.isSystem && (
                       <Button
@@ -235,7 +237,7 @@ function RolesTab(): React.ReactNode {
                             .catch((error: unknown) => window.alert(error instanceof Error ? error.message : "Error"));
                         }}
                       >
-                        🗑
+                        <IconTrash size={15} />
                       </Button>
                     )}
                   </div>

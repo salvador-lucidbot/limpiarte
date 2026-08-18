@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Card } from "../../../../../components/admin/ui";
+import { IconDownload } from "../../../../../components/icons";
 import { useAdminRequest } from "../../../../../lib/admin/use-admin-api";
 
 interface ImportResult {
@@ -88,8 +89,9 @@ export default function BulkImportPage(): React.ReactNode {
         <p className="mb-3 text-sm text-stone-600">
           Usa la plantilla CSV con las columnas: <code className="rounded bg-stone-100 px-1">{TEMPLATE}</code>
         </p>
-        <Button variant="secondary" onClick={downloadTemplate}>
-          ⬇ Descargar plantilla CSV
+        <Button variant="secondary" onClick={downloadTemplate} className="flex items-center gap-2">
+          <IconDownload size={15} />
+          Descargar plantilla CSV
         </Button>
       </Card>
 

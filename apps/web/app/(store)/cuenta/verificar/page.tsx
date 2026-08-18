@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { IconAlertTriangle, IconCheckCircle } from "../../../../components/icons";
 import { apiFetch } from "../../../../lib/api/client";
 
 function VerifyContent(): React.ReactNode {
@@ -25,14 +26,18 @@ function VerifyContent(): React.ReactNode {
       {status === "pending" && <p className="text-stone-500">Verificando tu correo…</p>}
       {status === "ok" && (
         <>
-          <span className="text-5xl">✅</span>
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
+            <IconCheckCircle size={38} />
+          </span>
           <h1 className="text-2xl font-bold text-navy-900">¡Correo verificado!</h1>
           <Link href="/cuenta" className="rounded-xl bg-brand-600 px-6 py-3 font-semibold text-white">Ir a mi cuenta</Link>
         </>
       )}
       {status === "error" && (
         <>
-          <span className="text-5xl">⚠️</span>
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-amber-50 text-amber-500">
+            <IconAlertTriangle size={38} />
+          </span>
           <h1 className="text-2xl font-bold text-navy-900">Enlace inválido o expirado</h1>
           <Link href="/cuenta/login" className="rounded-xl bg-brand-600 px-6 py-3 font-semibold text-white">Iniciar sesión</Link>
         </>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { IconFileText } from "../../../components/icons";
 import { apiFetch } from "../../../lib/api/client";
 import { BlogPostView, Paginated } from "../../../lib/api/types";
 import { demoBlogPosts } from "../../../lib/demo/demo-catalog";
@@ -37,7 +38,9 @@ export default async function BlogPage(): Promise<React.ReactNode> {
               {post.coverImageUrl ? (
                 <img src={post.coverImageUrl} alt={post.title} className="h-44 w-full object-cover transition group-hover:scale-105" />
               ) : (
-                <div className="flex h-44 items-center justify-center bg-brand-50 text-4xl">🧽</div>
+                <div className="flex h-44 items-center justify-center bg-brand-50 text-brand-300">
+                  <IconFileText size={44} strokeWidth={1.3} />
+                </div>
               )}
               <div className="p-5">
                 <h2 className="font-bold text-navy-900 group-hover:text-brand-700">{post.title}</h2>

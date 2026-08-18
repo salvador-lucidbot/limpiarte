@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { IconBuilding, IconCalendar, IconExternalLink, IconHomeHeart } from "../../../components/icons";
 
 export const metadata: Metadata = {
   title: "Servicios de aseo por horas",
@@ -7,17 +8,17 @@ export const metadata: Metadata = {
 
 const SERVICES = [
   {
-    icon: "🏠",
+    icon: IconHomeHeart,
     title: "Aseo por horas para hogares",
     text: "Profesionales de confianza para el aseo general o profundo de tu casa o apartamento, por el tiempo que necesites."
   },
   {
-    icon: "🏢",
+    icon: IconBuilding,
     title: "Aseo para empresas y oficinas",
     text: "Rutinas de limpieza para oficinas, locales y espacios comerciales con personal capacitado y suministros incluidos."
   },
   {
-    icon: "📅",
+    icon: IconCalendar,
     title: "Planes mensuales",
     text: "Frecuencias semanales o quincenales con tarifas preferenciales y la misma profesional asignada a tu servicio."
   }
@@ -36,16 +37,19 @@ export default function ServicesPage(): React.ReactNode {
           href="https://limpiarteenhoras.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-8 inline-block rounded-xl bg-white px-10 py-4 text-lg font-bold text-brand-700 transition hover:bg-brand-50"
+          className="mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-10 py-4 text-lg font-bold text-brand-700 transition hover:bg-brand-50"
         >
-          Agendar en limpiarteenhoras.com ↗
+          Agendar en limpiarteenhoras.com
+          <IconExternalLink size={19} />
         </a>
       </section>
 
       <section className="mt-12 grid gap-6 md:grid-cols-3">
         {SERVICES.map((service) => (
           <div key={service.title} className="rounded-2xl border border-stone-200 bg-white p-8">
-            <span className="text-4xl">{service.icon}</span>
+            <span className="flex h-13 w-13 items-center justify-center rounded-full bg-brand-50 text-brand-500">
+              <service.icon size={26} />
+            </span>
             <h2 className="mt-4 text-xl font-bold text-navy-900">{service.title}</h2>
             <p className="mt-2 leading-relaxed text-stone-600">{service.text}</p>
             <a

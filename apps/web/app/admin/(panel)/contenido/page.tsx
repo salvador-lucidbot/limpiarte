@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { slugify } from "../../../../components/admin/product-form";
 import { Badge, Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
+import { IconFileText, IconImage, IconMenu, IconPause, IconPencil, IconPlay, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 
 type Tab = "banners" | "paginas" | "blog" | "menu";
@@ -56,18 +57,19 @@ export default function ContentAdminPage(): React.ReactNode {
       <div className="flex gap-2 border-b border-stone-200">
         {(
           [
-            ["banners", "🖼️ Banners"],
-            ["paginas", "📄 Páginas"],
-            ["blog", "📝 Blog"],
-            ["menu", "🧭 Menú"]
-          ] as [Tab, string][]
-        ).map(([key, label]) => (
+            ["banners", "Banners", IconImage],
+            ["paginas", "Páginas", IconFileText],
+            ["blog", "Blog", IconPencil],
+            ["menu", "Menú", IconMenu]
+          ] as [Tab, string, (props: { size?: number }) => React.ReactNode][]
+        ).map(([key, label, TabIcon]) => (
           <button
             key={key}
             type="button"
             onClick={() => setTab(key)}
-            className={`px-4 py-2 text-sm font-medium ${tab === key ? "border-b-2 border-brand-600 text-brand-700" : "text-stone-500 hover:text-stone-700"}`}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium ${tab === key ? "border-b-2 border-brand-500 text-brand-700" : "text-stone-500 hover:text-stone-700"}`}
           >
+            <TabIcon size={15} />
             {label}
           </button>
         ))}
@@ -124,11 +126,9 @@ function BannersTab(): React.ReactNode {
                         void request(`/admin/marketing/banners/${banner.id}`, "PUT", { ...banner, isActive: !banner.isActive }).then(reload);
                       }}
                     >
-                      {banner.isActive ? "⏸" : "▶"}
+                      {banner.isActive ? <IconPause size={15} /> : <IconPlay size={15} />}
                     </Button>
-                    <Button variant="ghost" onClick={() => void request(`/admin/marketing/banners/${banner.id}`, "DELETE").then(reload)}>
-                      🗑
-                    </Button>
+                    <Button variant="ghost" onClick={() => void request(`/admin/marketing/banners/${banner.id}`, "DELETE").then(reload)}><IconTrash size={15} /></Button>
                   </div>
                 </td>
               </tr>
@@ -209,12 +209,8 @@ function PagesTab(): React.ReactNode {
                       setEditingId(page.id);
                       setForm({ slug: page.slug, title: page.title, content: page.content });
                     }}
-                  >
-                    ✏️
-                  </Button>
-                  <Button variant="ghost" onClick={() => void request(`/admin/marketing/pages/${page.id}`, "DELETE").then(reload)}>
-                    🗑
-                  </Button>
+                  ><IconPencil size={15} /></Button>
+                  <Button variant="ghost" onClick={() => void request(`/admin/marketing/pages/${page.id}`, "DELETE").then(reload)}><IconTrash size={15} /></Button>
                 </div>
               </li>
             ))}
@@ -304,12 +300,8 @@ function BlogTab(): React.ReactNode {
                         status: post.status
                       });
                     }}
-                  >
-                    ✏️
-                  </Button>
-                  <Button variant="ghost" onClick={() => void request(`/admin/marketing/blog/${post.id}`, "DELETE").then(reload)}>
-                    🗑
-                  </Button>
+                  ><IconPencil size={15} /></Button>
+                  <Button variant="ghost" onClick={() => void request(`/admin/marketing/blog/${post.id}`, "DELETE").then(reload)}><IconTrash size={15} /></Button>
                 </div>
               </li>
             ))}
@@ -384,9 +376,7 @@ function MenuTab(): React.ReactNode {
                 <td className="px-3 py-2 text-stone-500">{item.url}</td>
                 <td className="px-3 py-2">{item.position}</td>
                 <td className="px-3 py-2">
-                  <Button variant="ghost" onClick={() => void request(`/admin/marketing/menu/${item.id}`, "DELETE").then(reload)}>
-                    🗑
-                  </Button>
+                  <Button variant="ghost" onClick={() => void request(`/admin/marketing/menu/${item.id}`, "DELETE").then(reload)}><IconTrash size={15} /></Button>
                 </td>
               </tr>
             ))}

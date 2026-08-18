@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
+import { IconAlertTriangle } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 import { Paginated } from "../../../../lib/api/types";
 import { formatDate } from "../../../../lib/format";
@@ -65,9 +66,12 @@ export default function InventoryPage(): React.ReactNode {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
-          <Card title="⚠️ Productos con inventario bajo o agotado">
+          <Card
+            title="Productos con inventario bajo o agotado"
+            actions={<IconAlertTriangle size={18} className="text-amber-500" />}
+          >
             {!lowStock || lowStock.length === 0 ? (
-              <EmptyState message="Todo el inventario está por encima del umbral 🎉" />
+              <EmptyState message="Todo el inventario está por encima del umbral" />
             ) : (
               <Table headers={["Producto", "SKU", "Stock", "Umbral"]}>
                 {lowStock.map((row) => (

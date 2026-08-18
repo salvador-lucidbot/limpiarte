@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { IconCheckCircle } from "../../../../components/icons";
 import { apiFetch } from "../../../../lib/api/client";
 
 function ResetContent(): React.ReactNode {
@@ -29,7 +30,9 @@ function ResetContent(): React.ReactNode {
   if (status === "ok") {
     return (
       <div className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-24 text-center">
-        <span className="text-5xl">🔑</span>
+        <span className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
+          <IconCheckCircle size={38} />
+        </span>
         <h1 className="text-2xl font-bold text-navy-900">Contraseña actualizada</h1>
         <Link href="/cuenta/login" className="rounded-xl bg-brand-600 px-6 py-3 font-semibold text-white">
           Iniciar sesión

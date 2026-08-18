@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { IconPencil, IconTrash } from "../../../../components/icons";
 import { apiFetch } from "../../../../lib/api/client";
 import { AddressView } from "../../../../lib/api/types";
 import { useCustomerAuth } from "../../../../lib/auth/customer-auth-context";
@@ -125,8 +126,12 @@ export default function AddressesPage(): React.ReactNode {
                 {address.label ?? "Dirección"} {address.isDefault && <span className="ml-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700">Principal</span>}
               </p>
               <div className="flex gap-2 text-sm">
-                <button type="button" onClick={() => startEdit(address)} className="text-stone-400 hover:text-brand-700">✏️</button>
-                <button type="button" onClick={() => void remove(address.id)} className="text-stone-400 hover:text-red-500">🗑️</button>
+                <button type="button" onClick={() => startEdit(address)} aria-label="Editar dirección" className="text-stone-400 hover:text-brand-700">
+                  <IconPencil size={16} />
+                </button>
+                <button type="button" onClick={() => void remove(address.id)} aria-label="Eliminar dirección" className="text-stone-400 hover:text-red-500">
+                  <IconTrash size={16} />
+                </button>
               </div>
             </div>
             <p className="mt-2 text-sm text-stone-600">{address.recipientName} · {address.phone}</p>

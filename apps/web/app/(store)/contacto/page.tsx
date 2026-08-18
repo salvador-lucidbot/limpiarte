@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { IconCheckCircle } from "../../../components/icons";
 import { apiFetch } from "../../../lib/api/client";
 
 export default function ContactPage(): React.ReactNode {
@@ -30,8 +31,10 @@ export default function ContactPage(): React.ReactNode {
       <p className="mt-2 text-stone-600">Escríbenos y te responderemos lo antes posible.</p>
 
       {status === "sent" ? (
-        <div className="mt-8 rounded-2xl bg-brand-50 p-8 text-center">
-          <span className="text-4xl">📬</span>
+        <div className="mt-8 flex flex-col items-center rounded-2xl bg-brand-50 p-8 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-brand-500">
+            <IconCheckCircle size={32} />
+          </span>
           <p className="mt-3 font-semibold text-brand-800">¡Mensaje recibido! Te contactaremos pronto.</p>
         </div>
       ) : (

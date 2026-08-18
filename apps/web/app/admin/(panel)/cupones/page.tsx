@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Badge, Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
+import { IconPause, IconPencil, IconPlay, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 import { Paginated } from "../../../../lib/api/types";
 import { formatCOP, formatDate } from "../../../../lib/format";
@@ -122,13 +123,13 @@ export default function CouponsAdminPage(): React.ReactNode {
                           });
                         }}
                       >
-                        ✏️
+                        <IconPencil size={15} />
                       </Button>
                       <Button variant="ghost" onClick={() => void toggle(coupon)}>
-                        {coupon.isActive ? "⏸" : "▶"}
+                        {coupon.isActive ? <IconPause size={15} /> : <IconPlay size={15} />}
                       </Button>
                       <Button variant="ghost" onClick={() => void remove(coupon.id)}>
-                        🗑
+                        <IconTrash size={15} />
                       </Button>
                     </div>
                   </td>

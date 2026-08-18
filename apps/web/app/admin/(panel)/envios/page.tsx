@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Badge, Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
+import { IconPencil, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 import { formatCOP } from "../../../../lib/format";
 
@@ -93,7 +94,7 @@ export default function ShippingAdminPage(): React.ReactNode {
                           });
                         }}
                       >
-                        ✏️
+                        <IconPencil size={15} />
                       </Button>
                       <Button
                         variant="ghost"
@@ -102,7 +103,7 @@ export default function ShippingAdminPage(): React.ReactNode {
                           void request(`/admin/shipping/zones/${zone.id}`, "DELETE").then(reload);
                         }}
                       >
-                        🗑
+                        <IconTrash size={15} />
                       </Button>
                     </div>
                   </td>

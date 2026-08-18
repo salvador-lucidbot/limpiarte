@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { IconCart, IconDroplets, IconX } from "../../../components/icons";
 import { useCart } from "../../../lib/cart/cart-context";
 import { formatCOP } from "../../../lib/format";
 
@@ -25,7 +26,9 @@ export default function CartPage(): React.ReactNode {
   if (!cart || cart.items.length === 0) {
     return (
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 px-4 py-24 text-center">
-        <span className="text-6xl">🛒</span>
+        <span className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-50 text-brand-400">
+          <IconCart size={38} />
+        </span>
         <h1 className="text-2xl font-bold text-navy-900">Tu carrito está vacío</h1>
         <p className="text-stone-600">Explora el catálogo y agrega los productos de aseo que necesitas.</p>
         <Link href="/tienda" className="rounded-xl bg-brand-600 px-8 py-3 font-semibold text-white hover:bg-brand-700">
@@ -47,7 +50,9 @@ export default function CartPage(): React.ReactNode {
                 {item.imageUrl ? (
                   <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-2xl text-stone-300">🧴</div>
+                  <div className="flex h-full items-center justify-center bg-brand-50 text-brand-300">
+                    <IconDroplets size={32} strokeWidth={1.3} />
+                  </div>
                 )}
               </Link>
               <div className="flex flex-1 flex-col">
@@ -61,10 +66,10 @@ export default function CartPage(): React.ReactNode {
                   <button
                     type="button"
                     onClick={() => void removeItem(item.id)}
-                    className="text-stone-400 hover:text-red-500"
+                    className="text-stone-400 transition hover:text-red-500"
                     aria-label={`Eliminar ${item.name}`}
                   >
-                    ✕
+                    <IconX size={17} />
                   </button>
                 </div>
                 <div className="mt-auto flex items-center justify-between">

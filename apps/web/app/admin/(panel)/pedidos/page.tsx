@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Badge, Button, Card, EmptyState, inputClass, statusTone, Table } from "../../../../components/admin/ui";
+import { IconDownload } from "../../../../components/icons";
 import { useAdminGet } from "../../../../lib/admin/use-admin-api";
 import { useAdminAuth } from "../../../../lib/auth/admin-auth-context";
 import { API_URL } from "../../../../lib/api/client";
@@ -55,8 +56,9 @@ export default function AdminOrdersPage(): React.ReactNode {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-navy-900">Pedidos</h1>
-        <Button variant="secondary" onClick={() => void exportCsv()}>
-          ⬇ Exportar CSV
+        <Button variant="secondary" onClick={() => void exportCsv()} className="flex items-center gap-2">
+          <IconDownload size={15} />
+          Exportar CSV
         </Button>
       </div>
 

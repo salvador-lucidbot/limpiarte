@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Badge, Button, Card, EmptyState, statusTone, Table, inputClass } from "../../../../components/admin/ui";
+import { IconCopy, IconDroplets, IconPause, IconPlay, IconPlus, IconTrash, IconUpload } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 import { Paginated } from "../../../../lib/api/types";
 import { formatCOP } from "../../../../lib/format";
@@ -56,11 +57,13 @@ export default function AdminProductsPage(): React.ReactNode {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-navy-900">Productos</h1>
         <div className="flex gap-2">
-          <Link href="/admin/productos/importar" className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100">
-            ⬆ Carga masiva
+          <Link href="/admin/productos/importar" className="flex items-center gap-2 rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100">
+            <IconUpload size={15} />
+            Carga masiva
           </Link>
-          <Link href="/admin/productos/nuevo" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
-            + Nuevo producto
+          <Link href="/admin/productos/nuevo" className="flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600">
+            <IconPlus size={15} />
+            Nuevo producto
           </Link>
         </div>
       </div>
@@ -105,7 +108,9 @@ export default function AdminProductsPage(): React.ReactNode {
                       {product.images[0] ? (
                         <img src={product.images[0].url} alt="" className="h-9 w-9 rounded-lg object-cover" />
                       ) : (
-                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-stone-100">🧴</span>
+                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-300">
+                          <IconDroplets size={18} />
+                        </span>
                       )}
                       <div>
                         <Link href={`/admin/productos/${product.id}`} className="font-medium text-navy-900 hover:text-brand-700">
@@ -124,13 +129,13 @@ export default function AdminProductsPage(): React.ReactNode {
                   <td className="px-3 py-2">
                     <div className="flex gap-1">
                       <Button variant="ghost" title={product.status === "ACTIVE" ? "Despublicar" : "Publicar"} onClick={() => void toggleStatus(product)}>
-                        {product.status === "ACTIVE" ? "⏸" : "▶"}
+                        {product.status === "ACTIVE" ? <IconPause size={15} /> : <IconPlay size={15} />}
                       </Button>
                       <Button variant="ghost" title="Duplicar" onClick={() => void duplicate(product.id)}>
-                        ⧉
+                        <IconCopy size={15} />
                       </Button>
                       <Button variant="ghost" title="Eliminar" onClick={() => void remove(product.id)}>
-                        🗑
+                        <IconTrash size={15} />
                       </Button>
                     </div>
                   </td>

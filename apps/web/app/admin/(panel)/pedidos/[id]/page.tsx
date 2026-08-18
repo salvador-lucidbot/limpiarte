@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Badge, Button, Card, Field, inputClass, statusTone, Table } from "../../../../../components/admin/ui";
+import { IconMail, IconPlus, IconPrinter } from "../../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../../lib/admin/use-admin-api";
 import { ORDER_STATUS_LABELS, OrderView } from "../../../../../lib/api/types";
 import { formatCOP, formatDate } from "../../../../../lib/format";
@@ -74,11 +75,13 @@ export default function AdminOrderDetailPage(): React.ReactNode {
         </div>
         <div className="flex items-center gap-3">
           <Badge tone={statusTone(order.status)}>{ORDER_STATUS_LABELS[order.status] ?? order.status}</Badge>
-          <Button variant="secondary" onClick={() => void resend()}>
-            ✉ Reenviar confirmación
+          <Button variant="secondary" onClick={() => void resend()} className="flex items-center gap-2">
+            <IconMail size={15} />
+            Reenviar confirmación
           </Button>
-          <Button variant="secondary" onClick={() => window.print()}>
-            🖨 Imprimir
+          <Button variant="secondary" onClick={() => window.print()} className="flex items-center gap-2">
+            <IconPrinter size={15} />
+            Imprimir
           </Button>
         </div>
       </div>
@@ -273,8 +276,8 @@ export default function AdminOrderDetailPage(): React.ReactNode {
             </ul>
             <form onSubmit={(event) => void addNote(event)} className="flex gap-2">
               <input placeholder="Nueva nota…" value={noteText} onChange={(event) => setNoteText(event.target.value)} className={inputClass} />
-              <Button type="submit" variant="secondary">
-                +
+              <Button type="submit" variant="secondary" aria-label="Agregar nota">
+                <IconPlus size={15} />
               </Button>
             </form>
           </Card>

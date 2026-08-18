@@ -6,15 +6,32 @@ interface PriceTagProps {
   size?: "sm" | "lg";
 }
 
+function discountPercent(price: number, compareAtPrice: number): number {
+  return Math.round((1 - price / compareAtPrice) * 100);
+}
+
 export function PriceTag({ price, compareAtPrice, size = "sm" }: PriceTagProps): React.ReactNode {
-  const mainClass = size === "lg" ? "text-3xl font-bold text-navy-900" : "text-lg font-semibold text-navy-900";
+  const hasDiscount = compareAtPrice !== null && compareAtPrice > price;
+
+  if (size === "lg") {
+    return (
+      <div>
+        {hasDiscount && <p className="text-sm text-slate-400 line-through">{formatCOP(compareAtPrice)}</p>}
+        <div className="flex items-baseline gap-2.5">
+          <span className="text-4xl font-light tracking-tight text-navy-900">{formatCOP(price)}</span>
+          {hasDiscount && <span className="text-lg font-medium text-emerald-600">{discountPercent(price, compareAtPrice)}% OFF</span>}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex items-baseline gap-2">
-      <span className={mainClass}>{formatCOP(price)}</span>
-      {compareAtPrice !== null && compareAtPrice > price && (
-        <span className="text-sm text-stone-400 line-through">{formatCOP(compareAtPrice)}</span>
-      )}
+    <div>
+      {hasDiscount && <p className="text-xs text-slate-400 line-through">{formatCOP(compareAtPrice)}</p>}
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-xl font-medium tracking-tight text-navy-900">{formatCOP(price)}</span>
+        {hasDiscount && <span className="text-xs font-semibold text-emerald-600">{discountPercent(price, compareAtPrice)}% OFF</span>}
+      </div>
     </div>
   );
 }

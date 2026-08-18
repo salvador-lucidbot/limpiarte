@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Badge, Button, Card, EmptyState, Field, inputClass, statusTone, Table } from "../../../../components/admin/ui";
+import { IconRefresh } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 import { Paginated } from "../../../../lib/api/types";
 import { formatDate } from "../../../../lib/format";
@@ -34,15 +35,15 @@ interface EventLogRow {
 }
 
 const EVENT_LABELS: Record<string, string> = {
-  CART_ABANDONED: "🛒 Carrito abandonado",
-  ORDER_CREATED: "🧾 Pedido creado",
-  PAYMENT_APPROVED: "✅ Pago aprobado",
-  PAYMENT_REJECTED: "❌ Pago rechazado o pendiente",
-  ORDER_STATUS_CHANGED: "🔄 Cambio de estado del pedido",
-  ORDER_SHIPPED: "🚚 Pedido despachado",
-  ORDER_DELIVERED: "📬 Pedido entregado",
-  CUSTOMER_REGISTERED: "👤 Nuevo cliente registrado",
-  CONTACT_REQUEST: "💬 Solicitud de contacto"
+  CART_ABANDONED: "Carrito abandonado",
+  ORDER_CREATED: "Pedido creado",
+  PAYMENT_APPROVED: "Pago aprobado",
+  PAYMENT_REJECTED: "Pago rechazado o pendiente",
+  ORDER_STATUS_CHANGED: "Cambio de estado del pedido",
+  ORDER_SHIPPED: "Pedido despachado",
+  ORDER_DELIVERED: "Pedido entregado",
+  CUSTOMER_REGISTERED: "Nuevo cliente registrado",
+  CONTACT_REQUEST: "Solicitud de contacto"
 };
 
 export default function LucidBotPage(): React.ReactNode {
@@ -79,10 +80,10 @@ export default function LucidBotPage(): React.ReactNode {
     setTestResult("Probando conexión…");
     try {
       const result = await request<{ ok: boolean; statusCode: number | null; message: string }>("/admin/lucidbot/connection/test", "POST");
-      setTestResult(result.ok ? `✅ ${result.message}` : `❌ ${result.message} (HTTP ${result.statusCode ?? "—"})`);
+      setTestResult(result.ok ? result.message : `${result.message} (HTTP ${result.statusCode ?? "—"})`);
       await reloadConnection();
     } catch (error) {
-      setTestResult(`❌ ${error instanceof Error ? error.message : "Error"}`);
+      setTestResult(error instanceof Error ? error.message : "Error de conexión");
     }
   }
 
@@ -114,7 +115,7 @@ export default function LucidBotPage(): React.ReactNode {
         actions={
           connection && (
             <Badge tone={statusTone(connection.status)}>
-              {connection.status === "ACTIVE" ? "🟢 Activa" : connection.status === "ERROR" ? "🔴 Con error" : "⚪ Inactiva"}
+              {connection.status === "ACTIVE" ? "Activa" : connection.status === "ERROR" ? "Con error" : "Inactiva"}
             </Badge>
           )
         }
@@ -142,7 +143,7 @@ export default function LucidBotPage(): React.ReactNode {
                 Guardar conexión
               </Button>
               <Button type="button" variant="secondary" onClick={() => void testConnection()} disabled={!connection?.isConfigured}>
-                🔌 Probar conectividad
+                Probar conectividad
               </Button>
             </div>
             {testResult && <p className="text-sm text-stone-600">{testResult}</p>}
@@ -203,8 +204,9 @@ export default function LucidBotPage(): React.ReactNode {
       <Card
         title="3. Historial de eventos enviados"
         actions={
-          <Button variant="ghost" onClick={() => void reloadLogs()}>
-            ↻ Actualizar
+          <Button variant="ghost" onClick={() => void reloadLogs()} className="flex items-center gap-1.5">
+            <IconRefresh size={14} />
+            Actualizar
           </Button>
         }
       >
@@ -223,8 +225,13 @@ export default function LucidBotPage(): React.ReactNode {
                 <td className="px-3 py-2 text-stone-500">{formatDate(log.createdAt)}</td>
                 <td className="px-3 py-2">
                   {log.status === "FAILED" && (
-                    <Button variant="ghost" onClick={() => void request(`/admin/lucidbot/logs/${log.id}/retry`, "POST").then(reloadLogs)}>
-                      🔁 Reintentar
+                    <Button
+                      variant="ghost"
+                      className="flex items-center gap-1.5"
+                      onClick={() => void request(`/admin/lucidbot/logs/${log.id}/retry`, "POST").then(reloadLogs)}
+                    >
+                      <IconRefresh size={13} />
+                      Reintentar
                     </Button>
                   )}
                 </td>
