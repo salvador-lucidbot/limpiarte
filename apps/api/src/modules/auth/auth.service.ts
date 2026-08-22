@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { JwtService, JwtSignOptions } from "@nestjs/jwt";
 import { compare, hash } from "bcryptjs";
 import { createHash, randomBytes, randomInt } from "crypto";
@@ -53,6 +53,8 @@ function sha256(value: string): string {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -92,6 +94,10 @@ export class AuthService {
       name: user.firstName,
       code
     });
+
+    if (process.env.NODE_ENV !== "production" && !process.env.SMTP_HOST) {
+      this.logger.warn(`SMTP no configurado — código 2FA para ${user.email}: ${code}`);
+    }
 
     const ticket = await this.signToken({ sub: user.id, kind: "two_factor" }, `${TWO_FACTOR_MINUTES}m`);
 

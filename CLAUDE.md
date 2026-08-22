@@ -43,9 +43,15 @@
 - Seed: superadmin `superadmin@limpiarte.local` / `Limpiarte2026!` (sobrescribible con `SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD`). Cambiar en producción.
 - El 2FA llega por correo: sin SMTP configurado el código solo queda en el hash — configura SMTP antes de probar login admin, o toma el código del log si agregas trazas temporales.
 
+## Base de datos (Hostinger)
+
+- El schema está sincronizado en el MySQL de Hostinger con `prisma db push` (el hosting compartido no permite la shadow database que exige `migrate dev`; para cambios de schema usar `db push`, o generar SQL con `migrate diff` y aplicarlo con `db execute`).
+- `.env` de `apps/api` existe SOLO en local (gitignored); en Hostinger las variables van en el panel.
+- Seeds ejecutados contra la DB real: `prisma/seed.ts` (roles/permisos/superadmin/eventos/settings) y `prisma/seed-test-catalog.ts` (12 productos de prueba con variantes, 3 zonas de envío con 12 ciudades y cupón BIENVENIDA10; idempotente por slug/código — borrar desde el admin cuando llegue el catálogo definitivo).
+- Sin SMTP configurado, el código 2FA del login staff se imprime en el log del API (`AuthService`, solo si `NODE_ENV !== "production"`).
+
 ## Pendientes conocidos
 
-- Migración inicial de Prisma aún no generada (requiere MySQL accesible): `pnpm db:migrate` la crea.
 - Sección "clientes/[id]" del admin y detalle de contacto: API lista (`GET /admin/customers/:id`, `/contact/admin`), UI pendiente.
 - Subida de imágenes es por URL; no hay almacenamiento de archivos propio (decisión: usar CDN/hosting de imágenes del cliente).
 - Copias de seguridad programadas de DB: responsabilidad del hosting (Hostinger) — documentado en cotización B.6.

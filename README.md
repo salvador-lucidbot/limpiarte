@@ -123,8 +123,9 @@ cp apps/api/.env.example apps/api/.env      # configurar backend (DATABASE_URL, 
 cp apps/web/.env.example apps/web/.env.local # configurar frontend (URL de la API, clave pública Stripe)
 
 pnpm db:generate     # generar el cliente Prisma
-pnpm db:migrate      # crear/aplicar migraciones en desarrollo
+pnpm --filter @limpiarte/api exec prisma db push   # sincronizar schema (hosting compartido sin shadow DB)
 pnpm db:seed         # sembrar roles, permisos, Superadmin y settings base
+pnpm --filter @limpiarte/api exec tsx prisma/seed-test-catalog.ts   # catálogo de prueba opcional
 
 pnpm dev             # api (puerto 4000) + web (puerto 3000) en paralelo
 pnpm dev:api         # solo API · Swagger en http://localhost:4000/docs
