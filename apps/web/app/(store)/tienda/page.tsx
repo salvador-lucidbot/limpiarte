@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { CatalogFilters, CatalogSort } from "../../../components/store/catalog-filters";
 import { ProductCardView } from "../../../components/store/product-card-view";
+import { IconChevronDown } from "../../../components/icons";
 import { apiFetch } from "../../../lib/api/client";
-import { CategoryNode, Paginated, ProductCard } from "../../../lib/api/types";
-import { demoCatalogPage, demoCategories } from "../../../lib/demo/demo-catalog";
+import { CatalogListing } from "../../../lib/api/types";
+import { demoCatalogPage } from "../../../lib/demo/demo-catalog";
 import { isDemoMode } from "../../../lib/demo/demo-mode";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -12,6 +13,12 @@ function firstValue(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
 }
+
+const EMPTY_LISTING: CatalogListing = {
+  data: [],
+  meta: { page: 1, perPage: 24, total: 0, totalPages: 1 },
+  facets: { categories: [], brands: [], priceRanges: [], promoCount: 0, inStockCount: 0 }
+};
 
 export const metadata = { title: "Tienda" };
 
@@ -25,27 +32,32 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
   }
   query.set("perPage", "24");
 
-  let products: Paginated<ProductCard> = { data: [], meta: { page: 1, perPage: 24, total: 0, totalPages: 1 } };
-  let categories: CategoryNode[] = [];
-
+  let listing = EMPTY_LISTING;
   try {
-    [products, categories] = await Promise.all([
-      apiFetch<Paginated<ProductCard>>(`/catalog/products?${query.toString()}`, { revalidate: 60 }),
-      apiFetch<CategoryNode[]>("/catalog/categories", { revalidate: 300 })
-    ]);
+    listing = await apiFetch<CatalogListing>(`/catalog/products?${query.toString()}`, { revalidate: 60 });
   } catch {
-    void 0;
+    listing = EMPTY_LISTING;
   }
 
-  if (products.data.length === 0 && isDemoMode()) products = demoCatalogPage(query);
-  if (categories.length === 0 && isDemoMode()) categories = demoCategories();
+  if (listing.data.length === 0 && listing.facets.categories.length === 0 && isDemoMode()) {
+    listing = demoCatalogPage(query);
+  }
 
-  const activeCategory = firstValue(params.category);
-  const categoryData = activeCategory
-    ? categories.flatMap((category) => [category, ...category.children]).find((category) => category.slug === activeCategory)
+  const activeCategorySlug = firstValue(params.category);
+  const searchTerm = firstValue(params.q);
+  const promoOnly = firstValue(params.onPromo) === "true";
+
+  const categoryName = activeCategorySlug
+    ? (listing.facets.categories.find((option) => option.slug === activeCategorySlug)?.name ??
+      listing.data.find((product) => product.categorySlug === activeCategorySlug)?.categoryName ??
+      null)
     : null;
 
-  const currentPage = products.meta.page;
+  const listingTitle = searchTerm
+    ? `Resultados para "${searchTerm}"`
+    : (categoryName ?? (promoOnly ? "Ofertas" : "Productos de aseo"));
+
+  const currentPage = listing.meta.page;
 
   function pageHref(page: number): string {
     const nextParams = new URLSearchParams(query.toString());
@@ -54,54 +66,72 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     return `/tienda?${nextParams.toString()}`;
   }
 
+  const filtersPanel = <CatalogFilters facets={listing.facets} listingTitle={listingTitle} total={listing.meta.total} />;
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      {categoryData?.bannerUrl && (
-        <div className="relative mb-8 h-48 overflow-hidden rounded-2xl">
-          <img src={categoryData.bannerUrl} alt={categoryData.name} className="h-full w-full object-cover" />
-          <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent p-6">
-            <h1 className="text-3xl font-bold text-white">{categoryData.name}</h1>
+    <div className="mx-auto max-w-7xl px-4 py-6">
+      <nav className="mb-5 text-xs text-slate-400" aria-label="Migas de pan">
+        <Link href="/" className="hover:text-brand-600">Inicio</Link>
+        <span className="mx-1.5">›</span>
+        <Link href="/tienda" className="hover:text-brand-600">Tienda</Link>
+        {categoryName && (
+          <>
+            <span className="mx-1.5">›</span>
+            <span className="text-slate-500">{categoryName}</span>
+          </>
+        )}
+      </nav>
+
+      <div className="grid gap-8 lg:grid-cols-[250px_1fr]">
+        <div>
+          <details className="group rounded-lg border border-slate-200 bg-white lg:hidden">
+            <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold text-navy-900">
+              Filtrar resultados
+              <IconChevronDown size={16} className="transition group-open:rotate-180" />
+            </summary>
+            <div className="border-t border-slate-100 p-4">{filtersPanel}</div>
+          </details>
+          <div className="hidden lg:block">{filtersPanel}</div>
+        </div>
+
+        <div>
+          <div className="mb-4 flex items-center justify-end">
+            <CatalogSort />
           </div>
-        </div>
-      )}
 
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-navy-900">{categoryData ? categoryData.name : "Catálogo de productos"}</h1>
-          <p className="text-sm text-stone-500">{products.meta.total} productos</p>
-        </div>
-        <CatalogSort />
-      </div>
-
-      <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
-        <CatalogFilters categories={categories} />
-
-        <div>
-          {products.data.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-stone-300 p-16 text-center text-stone-500">
-              No encontramos productos con esos filtros.
+          {listing.data.length === 0 ? (
+            <div className="rounded-xl border border-slate-200 bg-white p-16 text-center">
+              <p className="font-semibold text-navy-900">No hay publicaciones que coincidan con tu búsqueda</p>
+              <ul className="mx-auto mt-4 max-w-sm space-y-1.5 text-left text-sm text-slate-500">
+                <li>· Revisa la ortografía de la palabra.</li>
+                <li>· Utiliza palabras más genéricas o menos palabras.</li>
+                <li>
+                  · <Link href="/tienda" className="text-brand-600 hover:underline">Navega el catálogo completo</Link> para encontrar el
+                  producto.
+                </li>
+              </ul>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-              {products.data.map((product) => (
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+              {listing.data.map((product) => (
                 <ProductCardView key={product.id} product={product} />
               ))}
             </div>
           )}
 
-          {products.meta.totalPages > 1 && (
-            <nav className="mt-8 flex justify-center gap-2" aria-label="Paginación">
+          {listing.meta.totalPages > 1 && (
+            <nav className="mt-8 flex items-center justify-center gap-2" aria-label="Paginación">
               {currentPage > 1 && (
-                <Link href={pageHref(currentPage - 1)} className="rounded-lg border border-stone-300 px-4 py-2 text-sm hover:bg-stone-100">
-                  ← Anterior
+                <Link href={pageHref(currentPage - 1)} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50">
+                  Anterior
                 </Link>
               )}
-              <span className="px-4 py-2 text-sm text-stone-500">
-                Página {currentPage} de {products.meta.totalPages}
+              <span className="px-3 py-2 text-sm text-slate-500">
+                Página {currentPage} de {listing.meta.totalPages}
               </span>
-              {currentPage < products.meta.totalPages && (
-                <Link href={pageHref(currentPage + 1)} className="rounded-lg border border-stone-300 px-4 py-2 text-sm hover:bg-stone-100">
-                  Siguiente →
+              {currentPage < listing.meta.totalPages && (
+                <Link href={pageHref(currentPage + 1)} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50">
+                  Siguiente
                 </Link>
               )}
             </nav>

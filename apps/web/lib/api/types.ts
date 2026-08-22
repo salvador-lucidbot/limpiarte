@@ -35,6 +35,31 @@ export interface CategoryNode {
   children: CategoryNode[];
 }
 
+export interface FacetOption {
+  name: string;
+  slug: string;
+  count: number;
+}
+
+export interface PriceRangeFacet {
+  label: string;
+  min: number | null;
+  max: number | null;
+  count: number;
+}
+
+export interface CatalogFacets {
+  categories: FacetOption[];
+  brands: FacetOption[];
+  priceRanges: PriceRangeFacet[];
+  promoCount: number;
+  inStockCount: number;
+}
+
+export interface CatalogListing extends Paginated<ProductCard> {
+  facets: CatalogFacets;
+}
+
 export interface ProductOptionView {
   id: string;
   name: string;

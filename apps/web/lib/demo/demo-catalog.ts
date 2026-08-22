@@ -1,4 +1,15 @@
-import { BannerView, BlogPostView, CategoryNode, Paginated, ProductCard, ProductDetail, StaticPageView } from "../api/types";
+import {
+  BannerView,
+  BlogPostView,
+  CatalogFacets,
+  CatalogListing,
+  CategoryNode,
+  Paginated,
+  PriceRangeFacet,
+  ProductCard,
+  ProductDetail,
+  StaticPageView
+} from "../api/types";
 
 interface DemoSeedProduct {
   slug: string;
@@ -261,35 +272,130 @@ export function demoBanners(): BannerView[] {
   return [];
 }
 
-export function demoCatalogPage(searchParams: URLSearchParams): Paginated<ProductCard> {
-  const category = searchParams.get("category");
-  const search = searchParams.get("q")?.toLowerCase();
-  const onPromo = searchParams.get("onPromo") === "true";
-  const inStock = searchParams.get("inStock") === "true";
-  const minPrice = searchParams.get("minPrice");
-  const maxPrice = searchParams.get("maxPrice");
-  const sort = searchParams.get("sort");
+interface DemoCatalogFilters {
+  category: string | null;
+  brand: string | null;
+  search: string | null;
+  onPromo: boolean;
+  inStock: boolean;
+  minPrice: number | null;
+  maxPrice: number | null;
+}
 
+function applyDemoFilters(filters: DemoCatalogFilters, exclude: Set<string> = new Set()): ProductCard[] {
   let products = demoProductCards();
 
-  if (category) products = products.filter((product) => product.categorySlug === category);
-  if (search) {
+  if (!exclude.has("category") && filters.category) products = products.filter((product) => product.categorySlug === filters.category);
+  if (!exclude.has("brand") && filters.brand) products = products.filter((product) => slugifyDemo(product.brandName ?? "") === filters.brand);
+  if (filters.search) {
+    const term = filters.search;
     products = products.filter(
-      (product) => product.name.toLowerCase().includes(search) || product.tags.some((tag) => tag.includes(search))
+      (product) => product.name.toLowerCase().includes(term) || product.tags.some((tag) => tag.includes(term))
     );
   }
-  if (onPromo) products = products.filter((product) => product.onPromo);
-  if (inStock) products = products.filter((product) => product.inStock);
-  if (minPrice) products = products.filter((product) => product.price >= Number(minPrice));
-  if (maxPrice) products = products.filter((product) => product.price <= Number(maxPrice));
+  if (!exclude.has("promo") && filters.onPromo) products = products.filter((product) => product.onPromo);
+  if (!exclude.has("stock") && filters.inStock) products = products.filter((product) => product.inStock);
+  if (!exclude.has("price") && filters.minPrice !== null) products = products.filter((product) => product.price >= (filters.minPrice ?? 0));
+  if (!exclude.has("price") && filters.maxPrice !== null) products = products.filter((product) => product.price <= (filters.maxPrice ?? Infinity));
 
+  return products;
+}
+
+function slugifyDemo(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function countBy(products: ProductCard[], keyOf: (product: ProductCard) => string | null): Map<string, { name: string; count: number }> {
+  const counts = new Map<string, { name: string; count: number }>();
+  for (const product of products) {
+    const name = keyOf(product);
+    if (!name) continue;
+    const slug = slugifyDemo(name);
+    const entry = counts.get(slug);
+    if (entry) entry.count += 1;
+    if (!entry) counts.set(slug, { name, count: 1 });
+  }
+  return counts;
+}
+
+function demoPriceRanges(prices: number[]): PriceRangeFacet[] {
+  if (prices.length < 3) return [];
+
+  const sorted = [...prices].sort((left, right) => left - right);
+  const round = (value: number): number => Math.round(value / 1000) * 1000;
+  const lowCut = round(sorted[Math.floor(sorted.length / 3)] ?? 0);
+  const highCut = round(sorted[Math.floor((sorted.length * 2) / 3)] ?? 0);
+  if (lowCut <= 0 || highCut <= lowCut) return [];
+
+  const format = (value: number): string => `$${new Intl.NumberFormat("es-CO").format(value)}`;
+  const ranges: PriceRangeFacet[] = [
+    { label: `Hasta ${format(lowCut)}`, min: null, max: lowCut, count: sorted.filter((price) => price <= lowCut).length },
+    {
+      label: `${format(lowCut)} a ${format(highCut)}`,
+      min: lowCut,
+      max: highCut,
+      count: sorted.filter((price) => price > lowCut && price <= highCut).length
+    },
+    { label: `Más de ${format(highCut)}`, min: highCut, max: null, count: sorted.filter((price) => price > highCut).length }
+  ];
+
+  return ranges.filter((range) => range.count > 0);
+}
+
+function demoFacets(filters: DemoCatalogFilters): CatalogFacets {
+  const categoryPool = applyDemoFilters(filters, new Set(["category"]));
+  const brandPool = applyDemoFilters(filters, new Set(["brand"]));
+  const pricePool = applyDemoFilters(filters, new Set(["price"]));
+  const promoPool = applyDemoFilters(filters, new Set(["promo"]));
+  const stockPool = applyDemoFilters(filters, new Set(["stock"]));
+
+  const categories = Array.from(countBy(categoryPool, (product) => product.categoryName).entries())
+    .map(([slug, entry]) => {
+      const canonical = demoProductCards().find((product) => product.categoryName === entry.name);
+      return { name: entry.name, slug: canonical?.categorySlug ?? slug, count: entry.count };
+    })
+    .sort((left, right) => right.count - left.count);
+
+  const brands = Array.from(countBy(brandPool, (product) => product.brandName).entries())
+    .map(([slug, entry]) => ({ name: entry.name, slug, count: entry.count }))
+    .sort((left, right) => right.count - left.count);
+
+  return {
+    categories,
+    brands,
+    priceRanges: demoPriceRanges(pricePool.map((product) => product.price)),
+    promoCount: promoPool.filter((product) => product.onPromo).length,
+    inStockCount: stockPool.filter((product) => product.inStock).length
+  };
+}
+
+export function demoCatalogPage(searchParams: URLSearchParams): CatalogListing {
+  const filters: DemoCatalogFilters = {
+    category: searchParams.get("category"),
+    brand: searchParams.get("brand"),
+    search: searchParams.get("q")?.toLowerCase() ?? null,
+    onPromo: searchParams.get("onPromo") === "true",
+    inStock: searchParams.get("inStock") === "true",
+    minPrice: searchParams.get("minPrice") ? Number(searchParams.get("minPrice")) : null,
+    maxPrice: searchParams.get("maxPrice") ? Number(searchParams.get("maxPrice")) : null
+  };
+
+  let products = applyDemoFilters(filters);
+
+  const sort = searchParams.get("sort");
   if (sort === "price_asc") products = [...products].sort((left, right) => left.price - right.price);
   if (sort === "price_desc") products = [...products].sort((left, right) => right.price - left.price);
   if (sort === "newest") products = [...products].reverse();
 
   return {
     data: products,
-    meta: { page: 1, perPage: 24, total: products.length, totalPages: 1 }
+    meta: { page: 1, perPage: 24, total: products.length, totalPages: 1 },
+    facets: demoFacets(filters)
   };
 }
 

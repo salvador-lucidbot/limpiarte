@@ -30,6 +30,78 @@ export interface CategoryNode {
   children: CategoryNode[];
 }
 
+export interface FacetOption {
+  name: string;
+  slug: string;
+  count: number;
+}
+
+export interface PriceRangeFacet {
+  label: string;
+  min: number | null;
+  max: number | null;
+  count: number;
+}
+
+export interface CatalogFacets {
+  categories: FacetOption[];
+  brands: FacetOption[];
+  priceRanges: PriceRangeFacet[];
+  promoCount: number;
+  inStockCount: number;
+}
+
+export interface CatalogListing extends PaginatedResult<ProductCard> {
+  facets: CatalogFacets;
+}
+
+type FacetDimension = "category" | "brand" | "price" | "promo" | "stock";
+
+function roundToNiceNumber(value: number): number {
+  if (value <= 0) return 0;
+  const magnitude = 10 ** Math.max(Math.floor(Math.log10(value)) - 1, 3);
+  return Math.round(value / magnitude) * magnitude;
+}
+
+function formatRangeCop(value: number): string {
+  return `$${new Intl.NumberFormat("es-CO").format(value)}`;
+}
+
+export function buildPriceRanges(prices: number[]): PriceRangeFacet[] {
+  if (prices.length < 3) return [];
+
+  const sorted = [...prices].sort((left, right) => left - right);
+  const lowIndex = Math.floor(sorted.length / 3);
+  const highIndex = Math.floor((sorted.length * 2) / 3);
+  const lowCut = roundToNiceNumber(sorted[lowIndex] ?? 0);
+  const highCut = roundToNiceNumber(sorted[highIndex] ?? 0);
+
+  if (lowCut <= 0 || highCut <= lowCut) return [];
+
+  const ranges: PriceRangeFacet[] = [
+    { label: `Hasta ${formatRangeCop(lowCut)}`, min: null, max: lowCut, count: 0 },
+    { label: `${formatRangeCop(lowCut)} a ${formatRangeCop(highCut)}`, min: lowCut, max: highCut, count: 0 },
+    { label: `Más de ${formatRangeCop(highCut)}`, min: highCut, max: null, count: 0 }
+  ];
+
+  for (const price of sorted) {
+    if (price <= lowCut) {
+      const range = ranges[0];
+      if (range) range.count += 1;
+      continue;
+    }
+    if (price <= highCut) {
+      const range = ranges[1];
+      if (range) range.count += 1;
+      continue;
+    }
+    const range = ranges[2];
+    if (range) range.count += 1;
+  }
+
+  return ranges.filter((range) => range.count > 0);
+}
+
 type CardProduct = Prisma.ProductGetPayload<{
   include: {
     brand: true;
@@ -55,17 +127,43 @@ export class StorefrontCatalogService {
     private readonly pricingService: PricingService
   ) {}
 
-  async listProducts(query: CatalogQueryDto): Promise<PaginatedResult<ProductCard>> {
+  async listProducts(query: CatalogQueryDto): Promise<CatalogListing> {
+    const where = this.buildWhere(query);
+    const orderBy = this.buildOrder(query.sort);
+
+    const [data, total, facets] = await Promise.all([
+      this.prisma.product.findMany({ where, include: CARD_INCLUDE, orderBy, ...skipTake(query.page, query.perPage) }),
+      this.prisma.product.count({ where }),
+      this.buildFacets(query)
+    ]);
+
+    const page = paginate(data.map((product) => this.toCard(product)), total, query.page, query.perPage);
+    return { ...page, facets };
+  }
+
+  private promoCondition(now: Date): Prisma.ProductWhereInput {
+    return {
+      promoPrice: { not: null },
+      AND: [
+        { OR: [{ promoStartsAt: null }, { promoStartsAt: { lte: now } }] },
+        { OR: [{ promoEndsAt: null }, { promoEndsAt: { gte: now } }] }
+      ]
+    };
+  }
+
+  private stockCondition(): Prisma.ProductWhereInput {
+    return { OR: [{ stock: { gt: 0 } }, { variants: { some: { isActive: true, stock: { gt: 0 } } } }, { allowBackorder: true }] };
+  }
+
+  private buildWhere(query: CatalogQueryDto, exclude: Set<FacetDimension> = new Set()): Prisma.ProductWhereInput {
     const now = new Date();
-    const where: Prisma.ProductWhereInput = {
+
+    return {
       deletedAt: null,
       status: ProductStatus.ACTIVE,
-      category: query.category ? { slug: query.category } : undefined,
-      brand: query.brand ? { slug: query.brand } : undefined,
-      basePrice: {
-        gte: query.minPrice,
-        lte: query.maxPrice
-      },
+      category: !exclude.has("category") && query.category ? { slug: query.category } : undefined,
+      brand: !exclude.has("brand") && query.brand ? { slug: query.brand } : undefined,
+      basePrice: exclude.has("price") ? undefined : { gte: query.minPrice, lte: query.maxPrice },
       tags: query.tag ? { some: { tag: { name: query.tag } } } : undefined,
       OR: query.q
         ? [
@@ -75,29 +173,71 @@ export class StorefrontCatalogService {
           ]
         : undefined,
       AND: [
-        query.inStock === "true"
-          ? { OR: [{ stock: { gt: 0 } }, { variants: { some: { isActive: true, stock: { gt: 0 } } } }, { allowBackorder: true }] }
-          : {},
-        query.onPromo === "true"
-          ? {
-              promoPrice: { not: null },
-              AND: [
-                { OR: [{ promoStartsAt: null }, { promoStartsAt: { lte: now } }] },
-                { OR: [{ promoEndsAt: null }, { promoEndsAt: { gte: now } }] }
-              ]
-            }
-          : {}
+        !exclude.has("stock") && query.inStock === "true" ? this.stockCondition() : {},
+        !exclude.has("promo") && query.onPromo === "true" ? this.promoCondition(now) : {}
       ]
     };
+  }
 
-    const orderBy = this.buildOrder(query.sort);
+  private async buildFacets(query: CatalogQueryDto): Promise<CatalogFacets> {
+    const now = new Date();
+    const whereForCategory = this.buildWhere(query, new Set<FacetDimension>(["category"]));
+    const whereForBrand = this.buildWhere(query, new Set<FacetDimension>(["brand"]));
+    const whereForPrice = this.buildWhere(query, new Set<FacetDimension>(["price"]));
+    const whereForPromo = this.buildWhere(query, new Set<FacetDimension>(["promo"]));
+    const whereForStock = this.buildWhere(query, new Set<FacetDimension>(["stock"]));
 
-    const [data, total] = await this.prisma.$transaction([
-      this.prisma.product.findMany({ where, include: CARD_INCLUDE, orderBy, ...skipTake(query.page, query.perPage) }),
-      this.prisma.product.count({ where })
+    const [categoryGroups, brandGroups, priceRows, promoCount, inStockCount] = await Promise.all([
+      this.prisma.product.groupBy({ by: ["categoryId"], where: whereForCategory, _count: { _all: true } }),
+      this.prisma.product.groupBy({ by: ["brandId"], where: whereForBrand, _count: { _all: true } }),
+      this.prisma.product.findMany({
+        where: whereForPrice,
+        select: { basePrice: true, promoPrice: true, promoStartsAt: true, promoEndsAt: true },
+        take: 2000
+      }),
+      this.prisma.product.count({ where: { AND: [whereForPromo, this.promoCondition(now)] } }),
+      this.prisma.product.count({ where: { AND: [whereForStock, this.stockCondition()] } })
     ]);
 
-    return paginate(data.map((product) => this.toCard(product)), total, query.page, query.perPage);
+    const categoryIds = categoryGroups.map((group) => group.categoryId).filter((id): id is string => id !== null);
+    const brandIds = brandGroups.map((group) => group.brandId).filter((id): id is string => id !== null);
+
+    const [categories, brands] = await Promise.all([
+      categoryIds.length > 0 ? this.prisma.category.findMany({ where: { id: { in: categoryIds }, isActive: true } }) : [],
+      brandIds.length > 0 ? this.prisma.brand.findMany({ where: { id: { in: brandIds } } }) : []
+    ]);
+
+    const categoryFacets: FacetOption[] = categoryGroups
+      .flatMap((group) => {
+        const category = categories.find((candidate) => candidate.id === group.categoryId);
+        if (!category) return [];
+        return [{ name: category.name, slug: category.slug, count: group._count._all }];
+      })
+      .sort((left, right) => right.count - left.count);
+
+    const brandFacets: FacetOption[] = brandGroups
+      .flatMap((group) => {
+        const brand = brands.find((candidate) => candidate.id === group.brandId);
+        if (!brand) return [];
+        return [{ name: brand.name, slug: brand.slug, count: group._count._all }];
+      })
+      .sort((left, right) => right.count - left.count);
+
+    const effectivePrices = priceRows.map((row) => {
+      const base = Number(row.basePrice);
+      if (row.promoPrice === null) return base;
+      if (row.promoStartsAt && row.promoStartsAt > now) return base;
+      if (row.promoEndsAt && row.promoEndsAt < now) return base;
+      return Math.min(Number(row.promoPrice), base);
+    });
+
+    return {
+      categories: categoryFacets,
+      brands: brandFacets,
+      priceRanges: buildPriceRanges(effectivePrices),
+      promoCount,
+      inStockCount
+    };
   }
 
   async featuredProducts(limit: number): Promise<ProductCard[]> {
