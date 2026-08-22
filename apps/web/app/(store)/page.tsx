@@ -18,8 +18,6 @@ import {
 import { ProductCardView } from "../../components/store/product-card-view";
 import { apiFetch } from "../../lib/api/client";
 import { BannerView, CategoryNode, ProductCard } from "../../lib/api/types";
-import { demoBanners, demoCategories, demoFeaturedProducts, demoPromoProducts } from "../../lib/demo/demo-catalog";
-import { isDemoMode } from "../../lib/demo/demo-mode";
 import { formatCOP } from "../../lib/format";
 
 async function safeFetch<T>(path: string, fallback: T): Promise<T> {
@@ -28,13 +26,6 @@ async function safeFetch<T>(path: string, fallback: T): Promise<T> {
   } catch {
     return fallback;
   }
-}
-
-function withDemo<T>(loaded: T[], demoValue: () => T[]): T[] {
-  if (loaded.length > 0) return loaded;
-  if (!isDemoMode()) return loaded;
-
-  return demoValue();
 }
 
 const CATEGORY_ICONS: Record<string, (props: { size?: number; className?: string }) => React.ReactNode> = {
@@ -86,17 +77,12 @@ function HeroProductCard({ product, className }: { product: ProductCard; classNa
 }
 
 export default async function HomePage(): Promise<React.ReactNode> {
-  const [loadedBanners, loadedCategories, loadedFeatured, loadedPromos] = await Promise.all([
+  const [banners, categories, featured, promos] = await Promise.all([
     safeFetch<BannerView[]>("/content/banners", []),
     safeFetch<CategoryNode[]>("/catalog/categories", []),
     safeFetch<ProductCard[]>("/catalog/products/featured", []),
     safeFetch<ProductCard[]>("/catalog/products/promos", [])
   ]);
-
-  const banners = withDemo(loadedBanners, demoBanners);
-  const categories = withDemo(loadedCategories, demoCategories);
-  const featured = withDemo(loadedFeatured, demoFeaturedProducts);
-  const promos = withDemo(loadedPromos, demoPromoProducts);
 
   const heroBanner = banners.find((banner) => banner.section === "HOME_HERO");
   const promoBanners = banners.filter((banner) => banner.section === "HOME_PROMO");

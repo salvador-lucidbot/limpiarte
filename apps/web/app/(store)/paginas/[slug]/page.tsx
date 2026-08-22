@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ApiError, apiFetch } from "../../../../lib/api/client";
 import { StaticPageView } from "../../../../lib/api/types";
-import { demoStaticPage } from "../../../../lib/demo/demo-catalog";
-import { isDemoMode } from "../../../../lib/demo/demo-mode";
 
 type Params = Promise<{ slug: string }>;
 
@@ -11,7 +9,6 @@ async function loadPage(slug: string): Promise<StaticPageView | null> {
   try {
     return await apiFetch<StaticPageView>(`/content/pages/${slug}`, { revalidate: 300 });
   } catch (error) {
-    if (isDemoMode()) return demoStaticPage(slug);
     if (error instanceof ApiError && error.statusCode === 404) return null;
     throw error;
   }

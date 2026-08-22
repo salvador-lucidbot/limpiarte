@@ -31,13 +31,6 @@
 - Checkout: crea pedido → si Stripe configurado renderiza `PaymentElement` con `clientSecret`; si no, flujo manual. Resultado en `/checkout/resultado` (lee `redirect_status`).
 - `apiFetch` (lib/api/client.ts): `revalidate: false` = no-store (todo lo autenticado); default 60 s para catálogo público.
 
-## Modo demostración (solo desarrollo)
-
-- `lib/demo/demo-mode.ts` → `isDemoMode()` es `true` salvo que `NODE_ENV === "production"` o `NEXT_PUBLIC_DEMO_MODE === "false"`. Verificado con `next start`: el botón demo no se renderiza en el build de producción.
-- Sirve para recorrer la plataforma sin base de datos. Datos en `lib/demo/demo-catalog.ts` (storefront), `demo-admin.ts` (panel) y `demo-cart.ts` (carrito en localStorage).
-- Storefront: cada página cae a datos demo si la API falla **o** responde vacío. Panel: botón "Entrar en modo demostración" en `/admin/login` → `loginDemo()` guarda un token sentinel (`DEMO_TOKEN`) que la API real rechazaría; `useAdminGet` sirve mocks y `useAdminRequest` rechaza las mutaciones.
-- Al conectar la base de datos real, los datos reales tienen prioridad automáticamente (el demo solo actúa cuando no hay contenido).
-
 ## Credenciales de desarrollo
 
 - Seed: superadmin `superadmin@limpiarte.local` / `Limpiarte2026!` (sobrescribible con `SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD`). Cambiar en producción.
@@ -47,7 +40,7 @@
 
 - El schema está sincronizado en el MySQL de Hostinger con `prisma db push` (el hosting compartido no permite la shadow database que exige `migrate dev`; para cambios de schema usar `db push`, o generar SQL con `migrate diff` y aplicarlo con `db execute`).
 - `.env` de `apps/api` existe SOLO en local (gitignored); en Hostinger las variables van en el panel.
-- Seeds ejecutados contra la DB real: `prisma/seed.ts` (roles/permisos/superadmin/eventos/settings) y `prisma/seed-test-catalog.ts` (12 productos de prueba con variantes, 3 zonas de envío con 12 ciudades y cupón BIENVENIDA10; idempotente por slug/código — borrar desde el admin cuando llegue el catálogo definitivo).
+- Seed ejecutado contra la DB real: `prisma/seed.ts` (roles/permisos/superadmin/eventos/settings). La base está limpia de datos de prueba (2026-08-22): catálogo, pedidos, zonas, cupones y contenido se gestionan desde el Superadmin. El modo demostración fue eliminado del código.
 - Sin SMTP configurado, el código 2FA del login staff se imprime en el log del API (`AuthService`, solo si `NODE_ENV !== "production"`).
 
 ## Pendientes conocidos

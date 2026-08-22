@@ -5,8 +5,6 @@ import { ProductCardView } from "../../../../components/store/product-card-view"
 import { ProductPurchasePanel } from "../../../../components/store/product-purchase-panel";
 import { ApiError, apiFetch } from "../../../../lib/api/client";
 import { ProductDetail } from "../../../../lib/api/types";
-import { demoProductDetail } from "../../../../lib/demo/demo-catalog";
-import { isDemoMode } from "../../../../lib/demo/demo-mode";
 
 type Params = Promise<{ slug: string }>;
 
@@ -14,7 +12,6 @@ async function loadProduct(slug: string): Promise<ProductDetail | null> {
   try {
     return await apiFetch<ProductDetail>(`/catalog/products/${slug}`, { revalidate: 60 });
   } catch (error) {
-    if (isDemoMode()) return demoProductDetail(slug);
     if (error instanceof ApiError && error.statusCode === 404) return null;
     throw error;
   }

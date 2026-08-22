@@ -4,8 +4,6 @@ import { ProductCardView } from "../../../components/store/product-card-view";
 import { IconChevronDown } from "../../../components/icons";
 import { apiFetch } from "../../../lib/api/client";
 import { CatalogListing } from "../../../lib/api/types";
-import { demoCatalogPage } from "../../../lib/demo/demo-catalog";
-import { isDemoMode } from "../../../lib/demo/demo-mode";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -37,10 +35,6 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     listing = await apiFetch<CatalogListing>(`/catalog/products?${query.toString()}`, { revalidate: 60 });
   } catch {
     listing = EMPTY_LISTING;
-  }
-
-  if (listing.data.length === 0 && listing.facets.categories.length === 0 && isDemoMode()) {
-    listing = demoCatalogPage(query);
   }
 
   const activeCategorySlug = firstValue(params.category);
