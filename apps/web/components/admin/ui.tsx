@@ -65,14 +65,14 @@ export function Badge({ children, tone = "neutral" }: { children: React.ReactNod
   return <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${tones[tone]}`}>{children}</span>;
 }
 
-export function Table({ headers, children }: { headers: string[]; children: React.ReactNode }): React.ReactNode {
+export function Table({ headers, children }: { headers: React.ReactNode[]; children: React.ReactNode }): React.ReactNode {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-stone-100 text-left text-stone-500">
-            {headers.map((header) => (
-              <th key={header} className="px-3 py-2 font-medium">
+            {headers.map((header, index) => (
+              <th key={typeof header === "string" ? header : index} className="px-3 py-2 font-medium">
                 {header}
               </th>
             ))}
@@ -94,4 +94,73 @@ export function statusTone(status: string): "neutral" | "success" | "warning" | 
   if (status === "NEW" || status === "PENDING" || status === "PREPARING" || status === "DRAFT") return "warning";
   if (status === "CANCELLED" || status === "REFUNDED" || status === "REJECTED" || status === "FAILED" || status === "INACTIVE") return "danger";
   return "neutral";
+}
+
+export const PER_PAGE_OPTIONS = [10, 20, 50, 100];
+
+interface PaginationMeta {
+  page: number;
+  perPage: number;
+  total: number;
+  totalPages: number;
+}
+
+interface PaginationProps {
+  meta: PaginationMeta;
+  itemLabel: string;
+  onPageChange: (page: number) => void;
+  onPerPageChange: (perPage: number) => void;
+}
+
+export function Pagination({ meta, itemLabel, onPageChange, onPerPageChange }: PaginationProps): React.ReactNode {
+  const first = meta.total === 0 ? 0 : (meta.page - 1) * meta.perPage + 1;
+  const last = Math.min(meta.page * meta.perPage, meta.total);
+
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-stone-500">
+      <div className="flex flex-wrap items-center gap-3">
+        <span>
+          {meta.total === 0 ? (
+            `Sin ${itemLabel}`
+          ) : (
+            <>
+              Mostrando <strong className="text-navy-900">{first}</strong>–<strong className="text-navy-900">{last}</strong> de{" "}
+              <strong className="text-navy-900">{meta.total}</strong> {itemLabel}
+            </>
+          )}
+        </span>
+        <label className="flex items-center gap-2">
+          <span className="text-stone-400">Por página</span>
+          <select
+            value={meta.perPage}
+            onChange={(event) => onPerPageChange(Number(event.target.value))}
+            className="rounded-lg border border-stone-300 px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-200"
+          >
+            {PER_PAGE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button variant="secondary" disabled={meta.page <= 1} onClick={() => onPageChange(meta.page - 1)} aria-label="Página anterior">
+          ←
+        </Button>
+        <span className="px-2 py-2">
+          {meta.page} / {meta.totalPages}
+        </span>
+        <Button
+          variant="secondary"
+          disabled={meta.page >= meta.totalPages}
+          onClick={() => onPageChange(meta.page + 1)}
+          aria-label="Página siguiente"
+        >
+          →
+        </Button>
+      </div>
+    </div>
+  );
 }

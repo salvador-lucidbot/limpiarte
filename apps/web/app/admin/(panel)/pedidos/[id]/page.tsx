@@ -8,6 +8,7 @@ import { IconMail, IconPlus, IconPrinter } from "../../../../../components/icons
 import { useAdminGet, useAdminRequest } from "../../../../../lib/admin/use-admin-api";
 import { ORDER_STATUS_LABELS, OrderView } from "../../../../../lib/api/types";
 import { formatCOP, formatDate } from "../../../../../lib/format";
+import { Loader } from "../../../../../components/loader";
 
 const NEXT_STATUS: Record<string, string[]> = {
   NEW: ["PAYMENT_CONFIRMED", "CANCELLED"],
@@ -28,7 +29,7 @@ export default function AdminOrderDetailPage(): React.ReactNode {
   const [noteText, setNoteText] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
-  if (!order) return <p className="text-stone-400">Cargando pedido…</p>;
+  if (!order) return <Loader fullScreen />;
 
   const availableStatuses = NEXT_STATUS[order.status] ?? [];
 

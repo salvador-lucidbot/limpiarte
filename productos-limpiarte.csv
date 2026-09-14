@@ -1,0 +1,111 @@
+name,sku,categorySlug,brandName,basePrice,stock,description,presentation,weightKg
+Limpiador multiusos concentrado,LG-001,limpieza-general,Limpiarte,18900,60,Concentrado para superficies lavables. Rinde hasta 20 litros de solución lista.,1 L,1.05
+Limpiador multiusos lavanda,LG-002,limpieza-general,Limpiarte,12500,90,Listo para usar con fragancia de lavanda. No requiere enjuague.,1 L,1.05
+Limpiador multiusos manzana verde,LG-003,limpieza-general,Limpiarte,12500,85,Listo para usar con fragancia frutal. Ideal para pisos y mesones.,1 L,1.05
+Limpiador multiusos línea bebé,LG-004,limpieza-general,Limpiarte,13900,70,Fórmula suave sin amoniaco para habitaciones infantiles y salacunas.,1 L,1.05
+Quitagrasas industrial,LG-005,limpieza-general,Limpiarte Pro,24900,45,Desengrasante alcalino para grasa pesada en talleres y cocinas industriales.,1 L,1.1
+Limpiavidrios con gatillo,LG-006,limpieza-general,Limpiarte,9800,100,Limpiador de vidrios y espejos con pulverizador. Secado rápido sin marcas.,500 ml,0.55
+Limpiador de acero inoxidable,LG-007,limpieza-general,Limpiarte,16500,40,Devuelve el brillo al acero y protege de huellas dactilares.,500 ml,0.55
+Lustramuebles en aerosol,LG-008,limpieza-general,Limpiarte,15900,50,Limpia y protege madera y superficies laminadas con acabado satinado.,400 ml,0.45
+Limpiador de tapetes y tapicería,LG-009,limpieza-general,Limpiarte,21500,35,Espuma activa que remueve manchas de telas alfombras y muebles.,600 ml,0.65
+Jabón líquido para manos con glicerina,LG-010,limpieza-general,Limpiarte,11900,120,Jabón cremoso apto para dispensador o uso directo.,1 L,1.05
+Hipoclorito de sodio al 5 por ciento,DES-001,desinfectantes,Limpiarte,7900,150,Blanqueador y desinfectante de uso general para pisos y baños.,1 L,1.1
+Hipoclorito de sodio presentación galón,DES-002,desinfectantes,Limpiarte,24900,60,Presentación rendidora para colegios oficinas y conjuntos residenciales.,3.8 L,4.0
+Amonio cuaternario de quinta generación,DES-003,desinfectantes,Limpiarte Pro,32900,40,Desinfectante de amplio espectro para áreas críticas. Diluir según ficha técnica.,1 L,1.1
+Alcohol antiséptico al 70 por ciento,DES-004,desinfectantes,Limpiarte,9500,130,Alcohol etílico para desinfección de manos y superficies de contacto.,700 ml,0.75
+Gel antibacterial para manos,DES-005,desinfectantes,Limpiarte,12900,110,Gel con 70 por ciento de alcohol y emolientes que cuidan la piel.,1 L,1.05
+Desinfectante de superficies aroma pino,DES-006,desinfectantes,Limpiarte,13500,85,Limpia y desinfecta en un solo paso con aroma a pino.,1 L,1.05
+Desinfectante de superficies aroma floral,DES-007,desinfectantes,Limpiarte,13500,80,Limpia y desinfecta en un solo paso con fragancia floral.,1 L,1.05
+Peróxido de hidrógeno acelerado,DES-008,desinfectantes,Limpiarte Pro,28900,30,Desinfectante sin cloro apto para áreas de manipulación de alimentos.,1 L,1.1
+Toallas desinfectantes húmedas,DES-009,desinfectantes,Limpiarte,15900,70,Toallas listas para desinfectar teclados manijas y superficies de contacto frecuente.,Paquete x 80,0.9
+Sanitizante para superficies de alimentos,DES-010,desinfectantes,Limpiarte Pro,26900,35,Sanitizante sin enjuague para mesones y utensilios de cocina.,1 L,1.1
+Lavaloza líquido limón,COC-001,cocina,Limpiarte,8900,140,Removedor de grasa con aroma a limón. Alto rendimiento por gota.,500 ml,0.55
+Lavaloza líquido limón familiar,COC-002,cocina,Limpiarte,15900,95,Presentación familiar rendidora para uso diario.,1 L,1.05
+Lavaloza en crema,COC-003,cocina,Limpiarte,7500,110,Crema lavaplatos que arrastra la grasa sin rayar los utensilios.,500 g,0.55
+Desengrasante para cocina con gatillo,COC-004,cocina,Limpiarte,14900,75,Disuelve grasa quemada en campanas estufas y hornos.,500 ml,0.55
+Limpiador de hornos,COC-005,cocina,Limpiarte Pro,19900,40,Gel de acción profunda para hornos y parrillas con grasa carbonizada.,500 ml,0.6
+Limpiador de neveras y microondas,COC-006,cocina,Limpiarte,13900,55,Limpia y desodoriza el interior de electrodomésticos sin dejar residuos.,500 ml,0.55
+Destapa cañerías para cocina,COC-007,cocina,Limpiarte,16900,50,Disuelve grasa y residuos orgánicos en desagües de cocina.,1 L,1.15
+Esponja doble uso para loza,COC-008,cocina,Limpiarte,3500,200,Esponja con fibra abrasiva que no raya. Paquete de tres unidades.,Paquete x 3,0.09
+Fibra verde abrasiva,COC-009,cocina,Limpiarte,4200,180,Fibra para grasa incrustada en ollas y parrillas.,Paquete x 3,0.08
+Limpiador de mesones de granito,COC-010,cocina,Limpiarte,18500,45,Limpiador de pH neutro que protege el sellado de piedra natural.,500 ml,0.55
+Limpiador de baños antisarro,BAN-001,banos,Limpiarte,13900,90,Remueve sarro y jabón acumulado en sanitarios y duchas.,1 L,1.1
+Limpiador de baños con gatillo,BAN-002,banos,Limpiarte,11900,85,Espuma adherente para azulejos y griferías.,500 ml,0.55
+Removedor de sarro y óxido,BAN-003,banos,Limpiarte Pro,17900,45,Ácido suave que disuelve incrustaciones de cal y manchas de óxido.,1 L,1.15
+Gel desinfectante para sanitario,BAN-004,banos,Limpiarte,10500,100,Gel adherente que desinfecta bajo el borde del sanitario.,500 ml,0.6
+Destapa cañerías para baño,BAN-005,banos,Limpiarte,16900,55,Disuelve cabello y residuos en desagües de ducha y lavamanos.,1 L,1.15
+Desodorante para sanitario en pastilla,BAN-006,banos,Limpiarte,6900,150,Pastilla adherente que perfuma con cada descarga. Dura hasta 30 días.,Unidad,0.06
+Ambientador para baño en aerosol,BAN-007,banos,Limpiarte,10900,95,Neutraliza olores fuertes en espacios cerrados.,360 ml,0.4
+Limpiador de juntas y azulejos,BAN-008,banos,Limpiarte,15500,40,Blanquea juntas oscurecidas por humedad y hongos.,500 ml,0.6
+Removedor de hongos y moho,BAN-009,banos,Limpiarte Pro,18900,38,Elimina moho en silicona cortinas y paredes húmedas.,500 ml,0.6
+Cepillo sanitario con base,BAN-010,banos,Limpiarte,12900,70,Cepillo de cerdas rígidas con base plástica de fácil limpieza.,Unidad,0.35
+Jabón líquido para pisos lavanda,PIS-001,pisos,Limpiarte,14500,100,Limpiador de pisos con fragancia duradera. Apto para baldosa y cerámica.,1 L,1.05
+Jabón líquido para pisos floral,PIS-002,pisos,Limpiarte,14500,95,Limpiador de pisos de uso diario con aroma floral.,1 L,1.05
+Jabón para pisos presentación galón,PIS-003,pisos,Limpiarte,39900,50,Presentación institucional para áreas de alto tráfico.,3.8 L,4.0
+Cera líquida autobrillante roja,PIS-004,pisos,Limpiarte,26900,40,Cera de secado rápido que protege y da brillo sin pulidora.,1 L,1.1
+Cera líquida autobrillante incolora,PIS-005,pisos,Limpiarte,26900,42,Cera transparente para pisos claros y superficies laminadas.,1 L,1.1
+Limpiador de pisos de madera,PIS-006,pisos,Limpiarte,22900,35,Fórmula de pH neutro que no reseca la madera ni el laminado.,1 L,1.05
+Removedor de cera,PIS-007,pisos,Limpiarte Pro,29900,25,Retira capas de cera envejecida antes del sellado.,1 L,1.15
+Sellador acrílico para pisos,PIS-008,pisos,Limpiarte Pro,45900,20,Sellador de alto tránsito para pisos porosos.,1 L,1.15
+Limpiador de porcelanato,PIS-009,pisos,Limpiarte,19900,45,Limpiador especializado que no deja película sobre porcelanato.,1 L,1.05
+Aromatizante para pisos concentrado,PIS-010,pisos,Limpiarte,20900,55,Concentrado que perfuma el ambiente durante el trapeado.,1 L,1.05
+Detergente en polvo multiusos,ROP-001,ropa-lavanderia,Limpiarte,12900,120,Detergente de alto rendimiento para lavado a mano y máquina.,1 kg,1.02
+Detergente en polvo presentación grande,ROP-002,ropa-lavanderia,Limpiarte,32900,70,Presentación rendidora para familias y lavanderías.,3 kg,3.05
+Detergente líquido para ropa,ROP-003,ropa-lavanderia,Limpiarte,19900,85,Detergente líquido concentrado de fácil disolución en agua fría.,1 L,1.08
+Detergente líquido ropa de color,ROP-004,ropa-lavanderia,Limpiarte,21900,60,Protege la intensidad del color lavado tras lavado.,1 L,1.08
+Blanqueador sin cloro,ROP-005,ropa-lavanderia,Limpiarte,14900,75,Blanquea prendas blancas y de color sin dañar las fibras.,1 L,1.1
+Suavizante para ropa aroma bebé,ROP-006,ropa-lavanderia,Limpiarte,16900,90,Suaviza las fibras y facilita el planchado.,1 L,1.08
+Suavizante para ropa aroma primavera,ROP-007,ropa-lavanderia,Limpiarte,16900,88,Fragancia floral de larga duración en la prenda.,1 L,1.08
+Quitamanchas en gel,ROP-008,ropa-lavanderia,Limpiarte,15900,65,Aplicación directa sobre la mancha antes del lavado.,500 ml,0.55
+Jabón de barra para ropa,ROP-009,ropa-lavanderia,Limpiarte,4900,160,Jabón tradicional para prelavado y manchas difíciles.,300 g,0.3
+Almidón en aerosol para planchado,ROP-010,ropa-lavanderia,Limpiarte,13900,55,Facilita el planchado y da acabado firme a camisas y uniformes.,500 ml,0.5
+Escoba de cerdas suaves con cabo,IMP-001,implementos,Limpiarte,15900,80,Escoba de fibra suave con cabo metálico recubierto.,Unidad,0.7
+Escoba de cerdas duras para exteriores,IMP-002,implementos,Limpiarte,18900,60,Cerdas rígidas para patios andenes y parqueaderos.,Unidad,0.9
+Trapeador de microfibra con cabo,IMP-003,implementos,Limpiarte,22900,70,Absorbe más agua y deja menos pelusa que el algodón.,Unidad,0.55
+Trapeador de algodón industrial,IMP-004,implementos,Limpiarte,17900,75,Mecha de algodón de alta absorción para áreas amplias.,Unidad,0.65
+Repuesto de mecha para trapeador,IMP-005,implementos,Limpiarte,9900,120,Repuesto universal compatible con cabos estándar.,Unidad,0.4
+Recogedor plástico con cabo,IMP-006,implementos,Limpiarte,12900,85,Recogedor con borde de goma que no deja línea de polvo.,Unidad,0.5
+Balde graduado de 12 litros,IMP-007,implementos,Limpiarte,14900,65,Balde plástico resistente con medidas impresas y asa metálica.,12 L,0.6
+Balde exprimidor con rodillo,IMP-008,implementos,Limpiarte,54900,25,Balde profesional con sistema exprimidor para trapeado continuo.,20 L,2.4
+Paños de microfibra multiuso,IMP-009,implementos,Limpiarte,16900,110,Paños lavables de alto rendimiento. No rayan superficies delicadas.,Paquete x 5,0.25
+Limpiavidrios profesional con escurridor,IMP-010,implementos,Limpiarte Pro,32900,30,Herramienta de doble cara con felpa y caucho de silicona.,Unidad,0.45
+Papel higiénico institucional,PAP-001,papel-desechables,Limpiarte,38900,60,Rollo de gran formato para dispensador institucional. Doble hoja.,Rollo x 250 m,1.2
+Papel higiénico doble hoja hogar,PAP-002,papel-desechables,Limpiarte,26900,90,Paquete familiar de rollos suaves de doble hoja.,Paquete x 12,1.8
+Toalla de manos en rollo,PAP-003,papel-desechables,Limpiarte,34900,55,Toalla absorbente para dispensador de baños institucionales.,Rollo x 180 m,1.1
+Toalla de manos plegada en Z,PAP-004,papel-desechables,Limpiarte,29900,50,Presentación plegada para dispensador de pared.,Paquete x 200,1.0
+Servilletas de mesa,PAP-005,papel-desechables,Limpiarte,8900,120,Servilletas blancas suaves para restaurantes y hogar.,Paquete x 500,0.9
+Toalla de cocina absorbente,PAP-006,papel-desechables,Limpiarte,12900,95,Rollo de toalla resistente en húmedo para cocina.,Paquete x 2,0.6
+Bolsas para basura calibre alto negras,PAP-007,papel-desechables,Limpiarte,17900,80,Bolsas resistentes para residuos pesados y escombros livianos.,Paquete x 10,1.1
+Bolsas para basura verdes,PAP-008,papel-desechables,Limpiarte,15900,85,Bolsas para residuos aprovechables según código de colores.,Paquete x 10,0.95
+Bolsas para basura blancas,PAP-009,papel-desechables,Limpiarte,15900,82,Bolsas para residuos ordinarios según código de colores vigente.,Paquete x 10,0.95
+Vasos desechables biodegradables,PAP-010,papel-desechables,Limpiarte,14900,70,Vasos de 7 onzas de material compostable.,Paquete x 50,0.4
+Guantes de caucho calibre 25 talla M,PPE-001,proteccion-personal,Limpiarte,8900,140,Guantes de látex con interior flocado para labores de aseo.,Par,0.12
+Guantes de caucho calibre 25 talla L,PPE-002,proteccion-personal,Limpiarte,8900,130,Guantes de látex resistentes a detergentes de uso frecuente.,Par,0.13
+Guantes de nitrilo desechables,PPE-003,proteccion-personal,Limpiarte,32900,50,Caja de guantes sin polvo resistentes a químicos.,Caja x 100,0.6
+Tapabocas quirúrgico tres capas,PPE-004,proteccion-personal,Limpiarte,18900,75,Caja de tapabocas desechables con filtro de tres capas.,Caja x 50,0.35
+Gafas de seguridad transparentes,PPE-005,proteccion-personal,Limpiarte Pro,14900,60,Protección ocular contra salpicaduras de químicos.,Unidad,0.09
+Delantal plástico impermeable,PPE-006,proteccion-personal,Limpiarte,16900,55,Delantal resistente a químicos con tirantes ajustables.,Unidad,0.3
+Botas de caucho antideslizantes,PPE-007,proteccion-personal,Limpiarte Pro,68900,25,Botas de seguridad para áreas húmedas con suela antideslizante.,Par,1.6
+Careta facial de protección,PPE-008,proteccion-personal,Limpiarte Pro,19900,40,Visor amplio con diadema ajustable para trabajos con químicos.,Unidad,0.18
+Uniforme de aseo tipo overol,PPE-009,proteccion-personal,Limpiarte Pro,89900,20,Overol de trabajo en dril resistente para personal de aseo.,Unidad,0.85
+Gorro desechable tipo malla,PPE-010,proteccion-personal,Limpiarte,12900,65,Cofia desechable para manipulación de alimentos.,Paquete x 100,0.2
+Limpiador multiusos institucional,INS-001,linea-institucional,Limpiarte Pro,58900,30,Presentación de 5 litros para consumo alto en empresas.,5 L,5.2
+Desinfectante institucional,INS-002,linea-institucional,Limpiarte Pro,64900,28,Desinfectante de amplio espectro en presentación rendidora.,5 L,5.2
+Jabón para manos institucional,INS-003,linea-institucional,Limpiarte Pro,42900,35,Jabón para recarga de dispensadores en baños de alto tráfico.,5 L,5.2
+Gel antibacterial institucional,INS-004,linea-institucional,Limpiarte Pro,74900,22,Recarga de gel antibacterial para dispensadores de pared.,5 L,5.2
+Lavaloza institucional,INS-005,linea-institucional,Limpiarte Pro,49900,30,Detergente lavaloza concentrado para cocinas industriales.,5 L,5.2
+Jabón para pisos institucional,INS-006,linea-institucional,Limpiarte Pro,52900,32,Limpiador de pisos rendidor para áreas de alto tránsito.,5 L,5.2
+Desengrasante institucional,INS-007,linea-institucional,Limpiarte Pro,79900,18,Desengrasante alcalino para plantas de producción.,5 L,5.3
+Dispensador de jabón de pared,INS-008,linea-institucional,Limpiarte Pro,54900,25,Dispensador con capacidad de 1 litro y llave de seguridad.,Unidad,0.65
+Dispensador de gel antibacterial con pedal,INS-009,linea-institucional,Limpiarte Pro,189900,12,Estación de desinfección sin contacto con base metálica.,Unidad,6.5
+Carro de aseo con exprimidor,INS-010,linea-institucional,Limpiarte Pro,389900,8,Carro profesional con dos baldes bolsa portaresiduos y prensa.,Unidad,12.0
+Shampoo para lavado de vehículos,AUT-001,linea-automotriz,Limpiarte,19900,55,Shampoo con espuma abundante que no retira la cera protectora.,1 L,1.08
+Shampoo con cera para vehículos,AUT-002,linea-automotriz,Limpiarte,24900,45,Lava y protege la pintura en un solo paso.,1 L,1.08
+Silicona para tablero en aerosol,AUT-003,linea-automotriz,Limpiarte,16900,70,Devuelve el brillo al plástico interior y protege del sol.,400 ml,0.45
+Silicona líquida para tablero,AUT-004,linea-automotriz,Limpiarte,14900,65,Acabado satinado de larga duración para superficies plásticas.,500 ml,0.55
+Limpiador de llantas y rines,AUT-005,linea-automotriz,Limpiarte,21900,50,Disuelve la suciedad del freno sin dañar el rin.,1 L,1.1
+Renovador de llantas,AUT-006,linea-automotriz,Limpiarte,18900,48,Devuelve el color negro profundo al caucho.,500 ml,0.55
+Limpiador de tapicería para vehículos,AUT-007,linea-automotriz,Limpiarte,22900,40,Espuma seca que remueve manchas de sillas y alfombras del carro.,600 ml,0.65
+Cera líquida para carrocería,AUT-008,linea-automotriz,Limpiarte Pro,38900,30,Cera con protección UV que realza el brillo de la pintura.,500 ml,0.6
+Paño de microfibra para secado,AUT-009,linea-automotriz,Limpiarte,19900,60,Paño de gran formato y alta absorción que no deja marcas.,Unidad,0.22
+Kit de lavado para vehículo,AUT-010,linea-automotriz,Limpiarte,89900,20,Incluye shampoo silicona paño de microfibra y esponja.,Kit,2.4

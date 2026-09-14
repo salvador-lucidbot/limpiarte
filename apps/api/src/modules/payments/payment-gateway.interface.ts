@@ -3,6 +3,7 @@ export interface PaymentIntentResult {
   externalId: string | null;
   clientSecret: string | null;
   publicKey: string | null;
+  redirectUrl: string | null;
   requiresOnlinePayment: boolean;
 }
 

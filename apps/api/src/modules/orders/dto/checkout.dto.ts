@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength, ValidateIf } from "class-validator";
+import { IsEmail, IsEnum, IsNumber, IsOptional, IsString, Max, Min, MinLength, ValidateIf } from "class-validator";
 import { DocumentType, ShippingMethod } from "../../../generated/prisma/enums";
 
 export class CheckoutDto {
@@ -75,4 +75,16 @@ export class CheckoutDto {
   @IsOptional()
   @IsString()
   customerNote?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  shippingLatitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  shippingLongitude?: number;
 }

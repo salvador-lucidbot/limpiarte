@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { buildProductPayload, EMPTY_PRODUCT_FORM, ProductForm, ProductFormValue } from "../../../../../components/admin/product-form";
 import { useAdminGet, useAdminRequest } from "../../../../../lib/admin/use-admin-api";
+import { Loader } from "../../../../../components/loader";
 
 interface CategoryRow {
   id: string;
@@ -132,7 +133,7 @@ export default function EditProductPage(): React.ReactNode {
     }
   }
 
-  if (!form) return <p className="text-stone-400">Cargando producto…</p>;
+  if (!form) return <Loader fullScreen />;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

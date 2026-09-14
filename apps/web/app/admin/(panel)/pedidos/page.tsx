@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Button, Card, EmptyState, inputClass, statusTone, Table } from "../../../../components/admin/ui";
+import { Badge, Button, Card, EmptyState, inputClass, Pagination, statusTone, Table } from "../../../../components/admin/ui";
 import { IconDownload } from "../../../../components/icons";
 import { useAdminGet } from "../../../../lib/admin/use-admin-api";
 import { useAdminAuth } from "../../../../lib/auth/admin-auth-context";
 import { API_URL } from "../../../../lib/api/client";
 import { ORDER_STATUS_LABELS, Paginated } from "../../../../lib/api/types";
 import { formatCOP, formatDate } from "../../../../lib/format";
+import { Loader } from "../../../../components/loader";
 
 interface OrderRow {
   id: string;
@@ -27,8 +28,9 @@ export default function AdminOrdersPage(): React.ReactNode {
   const { token } = useAdminAuth();
   const [filters, setFilters] = useState({ status: "", search: "", from: "", to: "" });
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(25);
 
-  const query = new URLSearchParams({ page: String(page), perPage: "25" });
+  const query = new URLSearchParams({ page: String(page), perPage: String(perPage) });
   if (filters.status) query.set("status", filters.status);
   if (filters.search) query.set("search", filters.search);
   if (filters.from) query.set("from", new Date(filters.from).toISOString());
@@ -93,7 +95,7 @@ export default function AdminOrdersPage(): React.ReactNode {
         </div>
 
         {loading ? (
-          <EmptyState message="Cargando…" />
+          <Loader />
         ) : !data || data.data.length === 0 ? (
           <EmptyState message="No hay pedidos con esos filtros" />
         ) : (
@@ -129,20 +131,15 @@ export default function AdminOrdersPage(): React.ReactNode {
                 </tr>
               ))}
             </Table>
-            <div className="mt-4 flex items-center justify-between text-sm text-stone-500">
-              <span>{data.meta.total} pedidos</span>
-              <div className="flex gap-2">
-                <Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                  ←
-                </Button>
-                <span className="px-2 py-2">
-                  {data.meta.page} / {data.meta.totalPages}
-                </span>
-                <Button variant="secondary" disabled={page >= data.meta.totalPages} onClick={() => setPage(page + 1)}>
-                  →
-                </Button>
-              </div>
-            </div>
+            <Pagination
+              meta={data.meta}
+              itemLabel="pedidos"
+              onPageChange={setPage}
+              onPerPageChange={(value) => {
+                setPerPage(value);
+                setPage(1);
+              }}
+            />
           </>
         )}
       </Card>

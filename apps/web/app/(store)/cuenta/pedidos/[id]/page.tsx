@@ -8,6 +8,7 @@ import { apiFetch } from "../../../../../lib/api/client";
 import { ORDER_STATUS_LABELS, OrderView } from "../../../../../lib/api/types";
 import { useCustomerAuth } from "../../../../../lib/auth/customer-auth-context";
 import { formatCOP, formatDate } from "../../../../../lib/format";
+import { Loader } from "../../../../../components/loader";
 
 export default function CustomerOrderDetailPage(): React.ReactNode {
   const { token, ready } = useCustomerAuth();
@@ -44,7 +45,7 @@ export default function CustomerOrderDetailPage(): React.ReactNode {
     }
   }
 
-  if (!order) return <div className="py-24 text-center text-stone-400">Cargando…</div>;
+  if (!order) return <Loader fullScreen />;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">

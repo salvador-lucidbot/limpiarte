@@ -7,6 +7,7 @@ import { PaginatedResult, PaginationDto, paginate, skipTake } from "../../common
 import { InventoryMovement, InventoryReason, Prisma, ProductStatus, User } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { EngagementService } from "../catalog/engagement.service";
 
 class AdjustStockDto {
   @IsString()
@@ -45,7 +46,8 @@ interface LowStockRow {
 export class InventoryController {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly auditService: AuditService
+    private readonly auditService: AuditService,
+    private readonly engagementService: EngagementService
   ) {}
 
   @Post("adjust")
@@ -64,6 +66,7 @@ export class InventoryController {
       });
 
       await this.recordMovement(dto, actor.id);
+      if (dto.quantityDelta > 0) await this.engagementService.notifyStockAlerts(dto.productId);
       return { stock: updated.stock };
     }
 
@@ -75,6 +78,7 @@ export class InventoryController {
     });
 
     await this.recordMovement(dto, actor.id);
+    if (dto.quantityDelta > 0) await this.engagementService.notifyStockAlerts(dto.productId);
     return { stock: updated.stock };
   }
 

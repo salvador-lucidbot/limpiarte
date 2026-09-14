@@ -45,4 +45,8 @@ export class CatalogQueryDto extends PaginationDto {
   @IsOptional()
   @IsIn(CATALOG_SORTS)
   sort?: CatalogSort;
+
+  @IsOptional()
+  @IsString()
+  ids?: string;
 }

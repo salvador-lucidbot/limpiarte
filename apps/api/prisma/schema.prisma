@@ -115,6 +115,12 @@ enum EventDeliveryStatus {
   FAILED
 }
 
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Role {
   id          String           @id @default(cuid())
   name        String           @unique
@@ -182,32 +188,34 @@ model User {
 }
 
 model Customer {
-  id                     String                @id @default(cuid())
-  email                  String                @unique
+  id                     String             @id @default(cuid())
+  email                  String             @unique
   passwordHash           String?
   firstName              String
   lastName               String
   phone                  String?
   documentType           DocumentType?
   documentNumber         String?
-  isActive               Boolean               @default(true)
+  isActive               Boolean            @default(true)
   emailVerifiedAt        DateTime?
   emailVerifyTokenHash   String?
   passwordResetTokenHash String?
   passwordResetExpiresAt DateTime?
   acceptedTermsAt        DateTime?
   dataConsentAt          DateTime?
-  marketingOptIn         Boolean               @default(false)
+  marketingOptIn         Boolean            @default(false)
   priceListId            String?
-  priceList              PriceList?            @relation(fields: [priceListId], references: [id], onDelete: SetNull)
+  priceList              PriceList?         @relation(fields: [priceListId], references: [id], onDelete: SetNull)
   tags                   CustomerTagLink[]
   addresses              Address[]
   orders                 Order[]
   carts                  Cart[]
   couponRedemptions      CouponRedemption[]
-  createdAt              DateTime              @default(now())
-  updatedAt              DateTime              @updatedAt
+  reviews                ProductReview[]
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
   deletedAt              DateTime?
+  visits                 VisitEvent[]
 }
 
 model CustomerTag {
@@ -239,6 +247,9 @@ model Address {
   state          String
   postalCode     String?
   isDefault      Boolean       @default(false)
+  latitude       Decimal?      @db.Decimal(10, 7)
+  longitude      Decimal?      @db.Decimal(10, 7)
+  notes          String?       @db.Text
   documentType   DocumentType?
   documentNumber String?
   companyName    String?
@@ -317,6 +328,10 @@ model Product {
   cartItems          CartItem[]
   orderItems         OrderItem[]
   couponRestrictions CouponProduct[]
+  reviews            ProductReview[]
+  questions          ProductQuestion[]
+  stockAlerts        StockAlert[]
+  visits             VisitEvent[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   deletedAt          DateTime?
@@ -459,18 +474,18 @@ model InventoryMovement {
 }
 
 model Cart {
-  id               String     @id @default(cuid())
-  customerId       String?
-  customer         Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  sessionToken     String?    @unique
-  status           CartStatus @default(ACTIVE)
-  couponId         String?
-  coupon           Coupon?    @relation(fields: [couponId], references: [id], onDelete: SetNull)
-  items            CartItem[]
-  abandonedAt      DateTime?
-  lucidNotifiedAt  DateTime?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  id              String     @id @default(cuid())
+  customerId      String?
+  customer        Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sessionToken    String?    @unique
+  status          CartStatus @default(ACTIVE)
+  couponId        String?
+  coupon          Coupon?    @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items           CartItem[]
+  abandonedAt     DateTime?
+  lucidNotifiedAt DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
   @@index([status, updatedAt])
 }
@@ -585,6 +600,8 @@ model Order {
   shippingPhone         String?
   shippingLine1         String?
   shippingLine2         String?
+  shippingLatitude      Decimal?             @db.Decimal(10, 7)
+  shippingLongitude     Decimal?             @db.Decimal(10, 7)
   shippingCity          String?
   shippingState         String?
   shippingPostalCode    String?
@@ -669,20 +686,20 @@ model Payment {
 }
 
 model Banner {
-  id          String        @id @default(cuid())
-  title       String
-  subtitle    String?
-  imageUrl    String
+  id             String        @id @default(cuid())
+  title          String
+  subtitle       String?
+  imageUrl       String
   mobileImageUrl String?
-  linkUrl     String?
-  buttonText  String?
-  section     BannerSection @default(HOME_HERO)
-  position    Int           @default(0)
-  isActive    Boolean       @default(true)
-  startsAt    DateTime?
-  endsAt      DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  linkUrl        String?
+  buttonText     String?
+  section        BannerSection @default(HOME_HERO)
+  position       Int           @default(0)
+  isActive       Boolean       @default(true)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
 
 model StaticPage {
@@ -799,4 +816,85 @@ model ContactRequest {
   message   String    @db.Text
   handledAt DateTime?
   createdAt DateTime  @default(now())
+}
+
+model ProductReview {
+  id                 String           @id @default(cuid())
+  productId          String
+  product            Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customerId         String?
+  customer           Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  authorName         String
+  rating             Int
+  title              String?
+  body               String           @db.Text
+  isVerifiedPurchase Boolean          @default(false)
+  status             ModerationStatus @default(PENDING)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([productId, customerId])
+  @@index([productId, status])
+}
+
+model ProductQuestion {
+  id         String           @id @default(cuid())
+  productId  String
+  product    Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  authorName String
+  email      String
+  question   String           @db.Text
+  answer     String?          @db.Text
+  answeredAt DateTime?
+  status     ModerationStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+
+  @@index([productId, status])
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  source    String?
+  createdAt DateTime @default(now())
+}
+
+model StockAlert {
+  id         String    @id @default(cuid())
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  email      String
+  notifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([productId, email])
+}
+
+enum VisitDevice {
+  MOBILE
+  TABLET
+  DESKTOP
+  UNKNOWN
+}
+
+model VisitEvent {
+  id         String      @id @default(cuid())
+  visitorId  String      @db.VarChar(64)
+  sessionId  String      @db.VarChar(64)
+  path       String      @db.VarChar(512)
+  referrer   String?     @db.VarChar(512)
+  source     String?     @db.VarChar(120)
+  medium     String?     @db.VarChar(120)
+  campaign   String?     @db.VarChar(120)
+  device     VisitDevice @default(UNKNOWN)
+  productId  String?
+  product    Product?    @relation(fields: [productId], references: [id], onDelete: SetNull)
+  customerId String?
+  customer   Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt  DateTime    @default(now())
+
+  @@index([createdAt])
+  @@index([sessionId])
+  @@index([visitorId])
+  @@index([productId, createdAt])
 }

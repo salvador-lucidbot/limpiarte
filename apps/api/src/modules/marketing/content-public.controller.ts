@@ -1,13 +1,36 @@
-import { Controller, Get, NotFoundException, Param, Query } from "@nestjs/common";
+import { Body, Controller, Get, NotFoundException, Param, Post, Query } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
+import { IsEmail, IsOptional, IsString, MaxLength } from "class-validator";
 import { Public } from "../../common/decorators/public.decorator";
 import { PaginatedResult, PaginationDto, paginate, skipTake } from "../../common/pagination/pagination.dto";
 import { Banner, BlogPost, MenuItem, PostStatus, StaticPage } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 
+class SubscribeDto {
+  @IsEmail()
+  email!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  source?: string;
+}
+
 @Public()
 @Controller("content")
 export class ContentPublicController {
   constructor(private readonly prisma: PrismaService) {}
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post("newsletter")
+  async subscribe(@Body() dto: SubscribeDto): Promise<{ subscribed: boolean }> {
+    await this.prisma.newsletterSubscriber.upsert({
+      where: { email: dto.email.toLowerCase() },
+      update: {},
+      create: { email: dto.email.toLowerCase(), source: dto.source }
+    });
+    return { subscribed: true };
+  }
 
   @Get("banners")
   banners(): Promise<Banner[]> {

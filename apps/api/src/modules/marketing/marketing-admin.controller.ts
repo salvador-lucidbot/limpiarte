@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, NotFoundException, Param, Post, Put } from "@nestjs/common";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { RequirePermissions } from "../../common/decorators/permissions.decorator";
-import { Banner, BlogPost, MenuItem, PostStatus, StaticPage, User } from "../../generated/prisma/client";
+import { Banner, BlogPost, MenuItem, NewsletterSubscriber, PostStatus, StaticPage, User } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { BannerDto, BlogPostDto, MenuItemDto, StaticPageDto } from "./dto/marketing.dto";
@@ -13,6 +13,15 @@ export class MarketingAdminController {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService
   ) {}
+
+  @Get("newsletter")
+  async listSubscribers(): Promise<{ total: number; subscribers: NewsletterSubscriber[] }> {
+    const [total, subscribers] = await this.prisma.$transaction([
+      this.prisma.newsletterSubscriber.count(),
+      this.prisma.newsletterSubscriber.findMany({ orderBy: { createdAt: "desc" }, take: 200 })
+    ]);
+    return { total, subscribers };
+  }
 
   @Get("banners")
   listBanners(): Promise<Banner[]> {

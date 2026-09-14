@@ -522,6 +522,65 @@ export function IconStore(props: IconProps): React.ReactNode {
   );
 }
 
+export function IconStar(props: IconProps): React.ReactNode {
+  return (
+    <Icon {...props}>
+      <path d="m12 3.2 2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z" />
+    </Icon>
+  );
+}
+
+export function IconStarFilled(props: IconProps): React.ReactNode {
+  const { size = 20, ...rest } = props;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden {...rest}>
+      <path d="m12 3.2 2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z" />
+    </svg>
+  );
+}
+
+export function IconHeart(props: IconProps): React.ReactNode {
+  return (
+    <Icon {...props}>
+      <path d="M12 20.5S3.5 15 3.5 9.3a4.7 4.7 0 0 1 8.5-2.8A4.7 4.7 0 0 1 20.5 9.3C20.5 15 12 20.5 12 20.5z" />
+    </Icon>
+  );
+}
+
+export function IconHeartFilled(props: IconProps): React.ReactNode {
+  const { size = 20, ...rest } = props;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden {...rest}>
+      <path d="M12 20.5S3.5 15 3.5 9.3a4.7 4.7 0 0 1 8.5-2.8A4.7 4.7 0 0 1 20.5 9.3C20.5 15 12 20.5 12 20.5z" />
+    </svg>
+  );
+}
+
+export function IconMessageCircle(props: IconProps): React.ReactNode {
+  return (
+    <Icon {...props}>
+      <path d="M12 3.5a8.5 8.5 0 0 1 0 17c-1.4 0-2.8-.3-4-1L3.5 20.5l1-4.4a8.5 8.5 0 0 1 7.5-12.6z" />
+    </Icon>
+  );
+}
+
+export function IconBell(props: IconProps): React.ReactNode {
+  return (
+    <Icon {...props}>
+      <path d="M18 9.5a6 6 0 0 0-12 0c0 6-2.5 7-2.5 7h17s-2.5-1-2.5-7" />
+      <path d="M10.2 20a2 2 0 0 0 3.6 0" />
+    </Icon>
+  );
+}
+
+export function IconFilter(props: IconProps): React.ReactNode {
+  return (
+    <Icon {...props}>
+      <path d="M4 6h16M7 12h10M10 18h4" />
+    </Icon>
+  );
+}
+
 export function IconWhatsApp(props: IconProps): React.ReactNode {
   const { size = 20, ...rest } = props;
   return (

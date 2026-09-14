@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { IconCart, IconMapPin, IconPackage } from "../../../components/icons";
 import { useCustomerAuth } from "../../../lib/auth/customer-auth-context";
+import { Loader } from "../../../components/loader";
 
 export default function AccountHomePage(): React.ReactNode {
   const { customer, ready, logout } = useCustomerAuth();
@@ -14,7 +15,7 @@ export default function AccountHomePage(): React.ReactNode {
     if (ready && !customer) router.push("/cuenta/login");
   }, [customer, ready, router]);
 
-  if (!ready || !customer) return <div className="py-24 text-center text-stone-400">Cargando…</div>;
+  if (!ready || !customer) return <Loader fullScreen />;
 
   const sections = [
     { href: "/cuenta/pedidos", icon: IconPackage, title: "Mis pedidos", text: "Historial, estado y seguimiento de tus compras" },

@@ -306,6 +306,30 @@ export class AdminProductQueryDto extends PaginationDto {
   @IsBoolean()
   @Type(() => Boolean)
   lowStock?: boolean;
+
+  @IsOptional()
+  @IsISO8601()
+  createdFrom?: string;
+
+  @IsOptional()
+  @IsISO8601()
+  createdTo?: string;
+}
+
+export class BulkStatusDto {
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(500)
+  ids?: string[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AdminProductQueryDto)
+  filter?: AdminProductQueryDto;
+
+  @IsEnum(ProductStatus)
+  status!: ProductStatus;
 }
 
 export class BulkImportRowDto {

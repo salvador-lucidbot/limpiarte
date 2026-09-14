@@ -3,7 +3,8 @@ import { PaginatedResult, paginate, skipTake } from "../../common/pagination/pag
 import { InventoryReason, Prisma, Product, ProductStatus } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
-import { AdminProductQueryDto, BulkImportDto, CreateProductDto, UpdateProductDto } from "./dto/product.dto";
+import { AdminProductQueryDto, BulkStatusDto, BulkImportDto, CreateProductDto, UpdateProductDto } from "./dto/product.dto";
+import { EngagementService } from "./engagement.service";
 
 export type AdminProductDetail = Prisma.ProductGetPayload<{
   include: {
@@ -42,19 +43,33 @@ function slugify(value: string): string {
 export class ProductsAdminService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly auditService: AuditService
+    private readonly auditService: AuditService,
+    private readonly engagementService: EngagementService
   ) {}
 
-  async list(query: AdminProductQueryDto): Promise<PaginatedResult<Product & { category: { name: string } | null }>> {
-    const where: Prisma.ProductWhereInput = {
+  private buildAdminWhere(query: AdminProductQueryDto): Prisma.ProductWhereInput {
+    const createdAt =
+      query.createdFrom || query.createdTo
+        ? {
+            gte: query.createdFrom ? new Date(query.createdFrom) : undefined,
+            lte: query.createdTo ? new Date(query.createdTo) : undefined
+          }
+        : undefined;
+
+    return {
       deletedAt: null,
       status: query.status,
       categoryId: query.categoryId,
       brandId: query.brandId,
+      createdAt,
       OR: query.search
         ? [{ name: { contains: query.search } }, { sku: { contains: query.search } }, { slug: { contains: query.search } }]
         : undefined
     };
+  }
+
+  async list(query: AdminProductQueryDto): Promise<PaginatedResult<Product & { category: { name: string } | null }>> {
+    const where = this.buildAdminWhere(query);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.product.findMany({
@@ -88,8 +103,14 @@ export class ProductsAdminService {
   }
 
   async update(id: string, dto: UpdateProductDto, actorId: string): Promise<AdminProductDetail> {
-    const existing = await this.prisma.product.findFirst({ where: { id, deletedAt: null } });
+    const existing = await this.prisma.product.findFirst({
+      where: { id, deletedAt: null },
+      include: { variants: { where: { isActive: true }, select: { stock: true } } }
+    });
     if (!existing) throw new NotFoundException("Producto no encontrado");
+
+    const previousStock =
+      existing.variants.length > 0 ? existing.variants.reduce((sum, variant) => sum + variant.stock, 0) : existing.stock;
 
     await this.prisma.$transaction(async (tx) => {
       await tx.product.update({ where: { id }, data: this.baseData(dto) });
@@ -97,6 +118,7 @@ export class ProductsAdminService {
     });
 
     await this.auditService.log({ userId: actorId, action: "product.updated", entity: "Product", entityId: id });
+    if (previousStock <= 0) await this.engagementService.notifyStockAlerts(id);
 
     return this.detail(id);
   }
@@ -136,6 +158,23 @@ export class ProductsAdminService {
     });
 
     return this.detail(id);
+  }
+
+  async bulkSetStatus(dto: BulkStatusDto, actorId: string): Promise<{ updated: number }> {
+    const where: Prisma.ProductWhereInput = dto.ids && dto.ids.length > 0
+      ? { deletedAt: null, id: { in: dto.ids } }
+      : this.buildAdminWhere(dto.filter ?? ({} as AdminProductQueryDto));
+
+    const result = await this.prisma.product.updateMany({ where, data: { status: dto.status } });
+
+    await this.auditService.log({
+      userId: actorId,
+      action: "product.bulk_status",
+      entity: "Product",
+      metadata: { status: dto.status, updated: result.count, mode: dto.ids && dto.ids.length > 0 ? "seleccion" : "filtro" }
+    });
+
+    return { updated: result.count };
   }
 
   async softDelete(id: string, actorId: string): Promise<{ deleted: boolean }> {

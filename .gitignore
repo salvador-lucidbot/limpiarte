@@ -12,6 +12,9 @@ coverage/
 apps/api/src/generated/
 *.tsbuildinfo
 
+apps/api/uploads/*
+!apps/api/uploads/.gitkeep
+
 apps/web/AGENTS.md
 apps/web/CLAUDE.md
 

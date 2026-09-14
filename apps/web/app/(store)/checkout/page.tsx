@@ -1,437 +1,521 @@
 "use client";
 
-import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { loadStripe, Stripe } from "@stripe/stripe-js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import { IconCheckCircle, IconLock, IconStore, IconTruck } from "../../../components/icons";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CheckoutSummary } from "../../../components/store/checkout-summary";
+import { LocationPicker, PickedLocation } from "../../../components/store/location-picker";
+import {
+  IconCheck,
+  IconChevronRight,
+  IconCreditCard,
+  IconLock,
+  IconMapPin,
+  IconPlus,
+  IconStore,
+  IconTruck
+} from "../../../components/icons";
 import { apiFetch } from "../../../lib/api/client";
 import { CheckoutResponse } from "../../../lib/api/types";
 import { useCustomerAuth } from "../../../lib/auth/customer-auth-context";
 import { useCart } from "../../../lib/cart/cart-context";
-import { formatCOP } from "../../../lib/format";
+import { formatCOP, formatDeliveryRange } from "../../../lib/format";
+
+type Step = 1 | 2 | 3;
+
+interface AddressRow {
+  id: string;
+  label: string | null;
+  recipientName: string;
+  phone: string;
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string;
+  notes: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  isDefault: boolean;
+}
 
 interface ShippingQuote {
   available: boolean;
+  zoneName: string | null;
   rate: number;
   freeShipping: boolean;
 }
 
-interface CheckoutFormState {
-  email: string;
-  customerName: string;
-  customerPhone: string;
-  shippingMethod: "DELIVERY" | "PICKUP";
-  shippingRecipient: string;
-  shippingPhone: string;
-  shippingLine1: string;
-  shippingLine2: string;
-  shippingCity: string;
-  shippingState: string;
-  billingName: string;
-  billingDocumentType: "" | "CC" | "CE" | "NIT" | "PASSPORT";
-  billingDocumentNumber: string;
-  billingCompanyName: string;
-  customerNote: string;
+const STEPS: { id: Step; label: string }[] = [
+  { id: 1, label: "Entrega" },
+  { id: 2, label: "Envío" },
+  { id: 3, label: "Pago" }
+];
+
+function Stepper({ current }: { current: Step }): React.ReactNode {
+  return (
+    <ol className="mb-8 flex items-center gap-2 text-sm">
+      {STEPS.map((step, index) => {
+        const done = current > step.id;
+        const active = current === step.id;
+        return (
+          <li key={step.id} className="flex items-center gap-2">
+            <span
+              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                done ? "bg-emerald-500 text-white" : active ? "bg-brand-500 text-white" : "bg-slate-200 text-slate-500"
+              }`}
+            >
+              {done ? <IconCheck size={14} /> : step.id}
+            </span>
+            <span className={active || done ? "font-semibold text-navy-900" : "text-slate-400"}>{step.label}</span>
+            {index < STEPS.length - 1 && <IconChevronRight size={15} className="text-slate-300" />}
+          </li>
+        );
+      })}
+    </ol>
+  );
 }
 
-const INITIAL_FORM: CheckoutFormState = {
-  email: "",
-  customerName: "",
-  customerPhone: "",
-  shippingMethod: "DELIVERY",
-  shippingRecipient: "",
-  shippingPhone: "",
-  shippingLine1: "",
-  shippingLine2: "",
-  shippingCity: "",
-  shippingState: "",
-  billingName: "",
-  billingDocumentType: "",
-  billingDocumentNumber: "",
-  billingCompanyName: "",
-  customerNote: ""
-};
-
-function PaymentStep({ orderNumber }: { orderNumber: string }): React.ReactNode {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [submitting, setSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  async function handlePay(event: React.FormEvent): Promise<void> {
-    event.preventDefault();
-    if (!stripe || !elements) return;
-
-    setSubmitting(true);
-    setErrorMessage(null);
-
-    const result = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/checkout/resultado?order=${orderNumber}`
-      }
-    });
-
-    if (result.error) {
-      setErrorMessage(result.error.message ?? "No se pudo procesar el pago");
-      setSubmitting(false);
-    }
-  }
-
+function Panel({ title, children }: { title: string; children: React.ReactNode }): React.ReactNode {
   return (
-    <form onSubmit={(event) => void handlePay(event)} className="space-y-4">
-      <PaymentElement />
-      {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
-      <button
-        type="submit"
-        disabled={!stripe || submitting}
-        className="w-full rounded-xl bg-brand-600 px-6 py-3 font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
-      >
-        {submitting ? "Procesando…" : "Pagar ahora"}
-      </button>
-    </form>
+    <section>
+      <h1 className="mb-4 text-xl font-bold text-navy-900 sm:text-2xl">{title}</h1>
+      {children}
+    </section>
   );
 }
 
 export default function CheckoutPage(): React.ReactNode {
-  const { cart } = useCart();
-  const { token, customer } = useCustomerAuth();
   const router = useRouter();
+  const { cart, clearCart } = useCart();
+  const { customer, token, ready } = useCustomerAuth();
 
-  const [form, setForm] = useState<CheckoutFormState>(INITIAL_FORM);
+  const [step, setStep] = useState<Step>(1);
+  const [addresses, setAddresses] = useState<AddressRow[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [pickup, setPickup] = useState(false);
+  const [showNewAddress, setShowNewAddress] = useState(false);
+  const [location, setLocation] = useState<PickedLocation | null>(null);
+  const [newAddress, setNewAddress] = useState({ recipientName: "", phone: "", line1: "", city: "", state: "", notes: "" });
+  const [savingAddress, setSavingAddress] = useState(false);
   const [quote, setQuote] = useState<ShippingQuote | null>(null);
-  const [quoting, setQuoting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [checkoutResult, setCheckoutResult] = useState<CheckoutResponse | null>(null);
 
-  const stripePromise = useMemo<Promise<Stripe | null> | null>(() => {
-    const key = checkoutResult?.payment.publicKey ?? process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY;
-    if (!key || key.includes("change_me")) return null;
-    return loadStripe(key);
-  }, [checkoutResult]);
+  const selectedAddress = useMemo(
+    () => addresses.find((address) => address.id === selectedAddressId) ?? null,
+    [addresses, selectedAddressId]
+  );
 
-  function update<K extends keyof CheckoutFormState>(key: K, value: CheckoutFormState[K]): void {
-    setForm((current) => ({ ...current, [key]: value }));
-  }
+  const loadAddresses = useCallback(async (): Promise<void> => {
+    if (!token) return;
+    const rows = await apiFetch<AddressRow[]>("/account/addresses", { token, revalidate: false });
+    setAddresses(rows);
+    setSelectedAddressId((current) => current ?? rows.find((row) => row.isDefault)?.id ?? rows[0]?.id ?? null);
+    setShowNewAddress(rows.length === 0);
+  }, [token]);
 
-  async function requestQuote(): Promise<void> {
-    if (!form.shippingCity || !form.shippingState || !cart) return;
-    setQuoting(true);
-    try {
-      const result = await apiFetch<ShippingQuote>(
-        `/shipping/quote?city=${encodeURIComponent(form.shippingCity)}&state=${encodeURIComponent(form.shippingState)}&subtotal=${cart.total}`,
-        { revalidate: false }
-      );
-      setQuote(result);
-    } catch {
+  useEffect(() => {
+    void loadAddresses();
+  }, [loadAddresses]);
+
+  useEffect(() => {
+    if (!cart || cart.items.length === 0) return;
+    if (pickup) {
+      setQuote({ available: true, zoneName: null, rate: 0, freeShipping: true });
+      return;
+    }
+    if (!selectedAddress) {
       setQuote(null);
+      return;
+    }
+
+    void apiFetch<ShippingQuote>(
+      `/shipping/quote?city=${encodeURIComponent(selectedAddress.city)}&state=${encodeURIComponent(selectedAddress.state)}&subtotal=${cart.total}`,
+      { revalidate: false }
+    )
+      .then(setQuote)
+      .catch(() => setQuote(null));
+  }, [cart, pickup, selectedAddress]);
+
+  async function saveAddress(): Promise<void> {
+    setErrorMessage(null);
+    setSavingAddress(true);
+    try {
+      await apiFetch<AddressRow>("/account/addresses", {
+        method: "POST",
+        token,
+        revalidate: false,
+        body: {
+          recipientName: newAddress.recipientName,
+          phone: newAddress.phone,
+          line1: newAddress.line1 || location?.line1 || "",
+          city: newAddress.city || location?.city || "",
+          state: newAddress.state || location?.state || "",
+          notes: newAddress.notes || undefined,
+          latitude: location?.latitude,
+          longitude: location?.longitude,
+          isDefault: addresses.length === 0
+        }
+      });
+      setShowNewAddress(false);
+      setLocation(null);
+      setNewAddress({ recipientName: "", phone: "", line1: "", city: "", state: "", notes: "" });
+      await loadAddresses();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo guardar la dirección");
     } finally {
-      setQuoting(false);
+      setSavingAddress(false);
     }
   }
 
-  async function submitOrder(event: React.FormEvent): Promise<void> {
-    event.preventDefault();
+  async function submitOrder(): Promise<void> {
     if (!cart) return;
-
-    setSubmitting(true);
     setErrorMessage(null);
-
+    setSubmitting(true);
     try {
       const payload = {
         sessionToken: cart.sessionToken,
-        email: customer?.email ?? form.email,
-        customerName: form.customerName,
-        customerPhone: form.customerPhone || undefined,
-        shippingMethod: form.shippingMethod,
-        shippingRecipient: form.shippingMethod === "DELIVERY" ? form.shippingRecipient || form.customerName : undefined,
-        shippingPhone: form.shippingMethod === "DELIVERY" ? form.shippingPhone || form.customerPhone : undefined,
-        shippingLine1: form.shippingMethod === "DELIVERY" ? form.shippingLine1 : undefined,
-        shippingLine2: form.shippingMethod === "DELIVERY" ? form.shippingLine2 || undefined : undefined,
-        shippingCity: form.shippingMethod === "DELIVERY" ? form.shippingCity : undefined,
-        shippingState: form.shippingMethod === "DELIVERY" ? form.shippingState : undefined,
-        billingName: form.billingName || undefined,
-        billingDocumentType: form.billingDocumentType || undefined,
-        billingDocumentNumber: form.billingDocumentNumber || undefined,
-        billingCompanyName: form.billingCompanyName || undefined,
-        customerNote: form.customerNote || undefined
+        email: customer?.email ?? "",
+        customerName: `${customer?.firstName ?? ""} ${customer?.lastName ?? ""}`.trim(),
+        customerPhone: selectedAddress?.phone,
+        shippingMethod: pickup ? "PICKUP" : "DELIVERY",
+        shippingRecipient: selectedAddress?.recipientName,
+        shippingPhone: selectedAddress?.phone,
+        shippingLine1: selectedAddress?.line1,
+        shippingLine2: selectedAddress?.line2 ?? undefined,
+        shippingCity: selectedAddress?.city,
+        shippingState: selectedAddress?.state,
+        shippingLatitude: selectedAddress?.latitude ? Number(selectedAddress.latitude) : undefined,
+        shippingLongitude: selectedAddress?.longitude ? Number(selectedAddress.longitude) : undefined,
+        customerNote: selectedAddress?.notes ?? undefined
       };
 
       const result = await apiFetch<CheckoutResponse>("/checkout", { method: "POST", body: payload, token, revalidate: false });
 
       if (!result.payment.requiresOnlinePayment) {
-        window.localStorage.removeItem("limpiarte_cart_token");
+        clearCart();
         router.push(`/checkout/resultado?order=${result.orderNumber}&estado=manual`);
         return;
       }
-
-      setCheckoutResult(result);
+      if (result.payment.redirectUrl) {
+        router.push(result.payment.redirectUrl);
+        return;
+      }
+      router.push(`/checkout/resultado?order=${result.orderNumber}`);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No se pudo crear el pedido");
-    } finally {
       setSubmitting(false);
     }
   }
 
-  if (!cart || cart.items.length === 0) {
-    if (checkoutResult) {
-      return (
-        <div className="mx-auto max-w-lg px-4 py-16">
-          <h1 className="mb-6 text-2xl font-bold text-navy-900">Pago del pedido {checkoutResult.orderNumber}</h1>
-          {stripePromise && checkoutResult.payment.clientSecret ? (
-            <Elements stripe={stripePromise} options={{ clientSecret: checkoutResult.payment.clientSecret, locale: "es" }}>
-              <PaymentStep orderNumber={checkoutResult.orderNumber} />
-            </Elements>
-          ) : (
-            <p className="text-stone-600">La pasarela de pago no está disponible. Contacta a soporte con tu número de pedido.</p>
-          )}
-        </div>
-      );
-    }
+  if (!ready || !cart) return <div className="mx-auto max-w-6xl px-4 py-16 text-center text-slate-400">Preparando tu compra…</div>;
 
+  if (cart.items.length === 0) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-24 text-center">
-        <p className="text-stone-600">Tu carrito está vacío.</p>
-        <Link href="/tienda" className="mt-4 inline-block rounded-xl bg-brand-600 px-8 py-3 font-semibold text-white">
+      <div className="mx-auto max-w-6xl px-4 py-20 text-center">
+        <p className="text-lg font-semibold text-navy-900">Tu carrito está vacío</p>
+        <Link href="/tienda" className="mt-4 inline-block rounded-lg bg-brand-500 px-6 py-3 font-semibold text-white hover:bg-brand-600">
           Ir a la tienda
         </Link>
       </div>
     );
   }
 
-  const shippingCost = form.shippingMethod === "PICKUP" ? 0 : quote?.available ? quote.rate : null;
-  const grandTotal = shippingCost !== null ? cart.total + shippingCost : cart.total;
-
-  if (checkoutResult) {
+  if (!customer) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16">
-        <h1 className="mb-2 text-2xl font-bold text-navy-900">Pago seguro</h1>
-        <p className="mb-6 text-stone-600">
-          Pedido <strong>{checkoutResult.orderNumber}</strong> · Total {formatCOP(checkoutResult.grandTotal)}
-        </p>
-        {stripePromise && checkoutResult.payment.clientSecret ? (
-          <Elements stripe={stripePromise} options={{ clientSecret: checkoutResult.payment.clientSecret, locale: "es" }}>
-            <PaymentStep orderNumber={checkoutResult.orderNumber} />
-          </Elements>
-        ) : (
-          <p className="text-stone-600">La pasarela de pago no está disponible en este momento.</p>
-        )}
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
+          <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-500">
+            <IconLock size={26} />
+          </span>
+          <h1 className="text-xl font-bold text-navy-900">Inicia sesión para continuar</h1>
+          <p className="mt-2 text-sm text-slate-600">
+            Necesitamos tu cuenta para guardar la dirección de entrega y que puedas seguir tu pedido. Tu carrito se conserva.
+          </p>
+          <div className="mt-6 space-y-2.5">
+            <Link
+              href="/cuenta/login?redirect=/checkout"
+              className="block rounded-lg bg-brand-500 py-3 font-semibold text-white transition hover:bg-brand-600"
+            >
+              Iniciar sesión
+            </Link>
+            <Link
+              href="/cuenta/registro?redirect=/checkout"
+              className="block rounded-lg border border-slate-300 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Crear cuenta
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const inputClass = "w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none";
+  const canContinueDelivery = pickup || (selectedAddress !== null && quote?.available === true);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <h1 className="mb-8 text-2xl font-bold text-navy-900">Finalizar compra</h1>
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <Stepper current={step} />
 
-      <form onSubmit={(event) => void submitOrder(event)} className="grid gap-8 lg:grid-cols-[1fr_360px]">
-        <div className="space-y-8">
-          <section className="rounded-2xl border border-stone-200 bg-white p-6">
-            <h2 className="mb-4 text-lg font-bold text-navy-900">1. Tus datos</h2>
-            {!customer && (
-              <p className="mb-4 rounded-lg bg-brand-50 px-4 py-2 text-sm text-brand-800">
-                ¿Ya tienes cuenta?{" "}
-                <Link href="/cuenta/login" className="font-semibold underline">
-                  Inicia sesión
-                </Link>{" "}
-                o continúa como invitado.
-              </p>
-            )}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-stone-700">Correo electrónico *</label>
-                <input
-                  type="email"
-                  required={!customer}
-                  disabled={Boolean(customer)}
-                  value={customer?.email ?? form.email}
-                  onChange={(event) => update("email", event.target.value)}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-stone-700">Nombre completo *</label>
-                <input required value={form.customerName} onChange={(event) => update("customerName", event.target.value)} className={inputClass} />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-stone-700">Teléfono</label>
-                <input value={form.customerPhone} onChange={(event) => update("customerPhone", event.target.value)} className={inputClass} />
-              </div>
-            </div>
-          </section>
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="space-y-4">
+          {step === 1 && (
+            <Panel title="Elige la forma de entrega">
+              <div className="space-y-3">
+                {addresses.map((address) => (
+                  <label
+                    key={address.id}
+                    className={`block cursor-pointer rounded-xl border bg-white p-5 transition ${
+                      !pickup && selectedAddressId === address.id ? "border-brand-500 ring-1 ring-brand-200" : "border-slate-200"
+                    }`}
+                  >
+                    <span className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        name="delivery"
+                        checked={!pickup && selectedAddressId === address.id}
+                        onChange={() => {
+                          setPickup(false);
+                          setSelectedAddressId(address.id);
+                        }}
+                        className="mt-1 accent-brand-600"
+                      />
+                      <span className="flex-1">
+                        <span className="flex items-baseline justify-between gap-3">
+                          <span className="font-semibold text-navy-900">Enviar a domicilio</span>
+                          {!pickup && selectedAddressId === address.id && quote && (
+                            <span className={`font-semibold ${quote.rate === 0 ? "text-emerald-600" : "text-navy-900"}`}>
+                              {quote.rate === 0 ? "Gratis" : formatCOP(quote.rate)}
+                            </span>
+                          )}
+                        </span>
+                        <span className="mt-1 block text-sm text-slate-600">
+                          {address.line1}
+                          {address.line2 ? `, ${address.line2}` : ""} — {address.city}, {address.state}
+                        </span>
+                        <span className="mt-1 block text-xs text-slate-400">
+                          {address.label ?? "Residencial"} · {address.recipientName} · {address.phone}
+                        </span>
+                      </span>
+                    </span>
+                  </label>
+                ))}
 
-          <section className="rounded-2xl border border-stone-200 bg-white p-6">
-            <h2 className="mb-4 text-lg font-bold text-navy-900">2. Entrega</h2>
-            <div className="mb-4 flex gap-3">
-              {(["DELIVERY", "PICKUP"] as const).map((method) => (
-                <button
-                  key={method}
-                  type="button"
-                  onClick={() => update("shippingMethod", method)}
-                  className={`flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-medium transition ${
-                    form.shippingMethod === method ? "border-brand-500 bg-brand-50 text-brand-700" : "border-stone-300 text-stone-600 hover:border-stone-400"
+                {!showNewAddress && (
+                  <button
+                    type="button"
+                    onClick={() => setShowNewAddress(true)}
+                    className="flex items-center gap-1.5 px-1 text-sm font-medium text-brand-600 hover:underline"
+                  >
+                    <IconPlus size={15} />
+                    {addresses.length === 0 ? "Agregar dirección de entrega" : "Modificar domicilio o elegir otro"}
+                  </button>
+                )}
+
+                {showNewAddress && (
+                  <div className="rounded-xl border border-slate-200 bg-white p-5">
+                    <p className="mb-3 flex items-center gap-2 font-semibold text-navy-900">
+                      <IconMapPin size={18} className="text-brand-500" />
+                      Ubica tu dirección en el mapa
+                    </p>
+
+                    <LocationPicker
+                      value={location}
+                      onChange={(picked) => {
+                        setLocation(picked);
+                        setNewAddress((current) => ({
+                          ...current,
+                          line1: picked.line1 || current.line1,
+                          city: picked.city || current.city,
+                          state: picked.state || current.state
+                        }));
+                      }}
+                    />
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <input
+                        placeholder="Quién recibe *"
+                        value={newAddress.recipientName}
+                        onChange={(event) => setNewAddress({ ...newAddress, recipientName: event.target.value })}
+                        className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-brand-400"
+                      />
+                      <input
+                        placeholder="Teléfono *"
+                        value={newAddress.phone}
+                        onChange={(event) => setNewAddress({ ...newAddress, phone: event.target.value })}
+                        className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-brand-400"
+                      />
+                      <input
+                        placeholder="Dirección *"
+                        value={newAddress.line1}
+                        onChange={(event) => setNewAddress({ ...newAddress, line1: event.target.value })}
+                        className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-brand-400 sm:col-span-2"
+                      />
+                      <input
+                        placeholder="Ciudad *"
+                        value={newAddress.city}
+                        onChange={(event) => setNewAddress({ ...newAddress, city: event.target.value })}
+                        className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-brand-400"
+                      />
+                      <input
+                        placeholder="Departamento *"
+                        value={newAddress.state}
+                        onChange={(event) => setNewAddress({ ...newAddress, state: event.target.value })}
+                        className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-brand-400"
+                      />
+                      <input
+                        placeholder="Indicaciones para el domiciliario"
+                        value={newAddress.notes}
+                        onChange={(event) => setNewAddress({ ...newAddress, notes: event.target.value })}
+                        className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-brand-400 sm:col-span-2"
+                      />
+                    </div>
+
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void saveAddress()}
+                        disabled={savingAddress || !newAddress.recipientName || !newAddress.phone || !newAddress.line1}
+                        className="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50"
+                      >
+                        {savingAddress ? "Guardando…" : "Guardar dirección"}
+                      </button>
+                      {addresses.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowNewAddress(false)}
+                          className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          Cancelar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <label
+                  className={`block cursor-pointer rounded-xl border bg-white p-5 transition ${
+                    pickup ? "border-brand-500 ring-1 ring-brand-200" : "border-slate-200"
                   }`}
                 >
-                  {method === "DELIVERY" ? <IconTruck size={18} /> : <IconStore size={18} />}
-                  {method === "DELIVERY" ? "Envío a domicilio" : "Recoger en sede"}
-                </button>
-              ))}
-            </div>
+                  <span className="flex items-start gap-3">
+                    <input type="radio" name="delivery" checked={pickup} onChange={() => setPickup(true)} className="mt-1 accent-brand-600" />
+                    <span className="flex-1">
+                      <span className="flex items-baseline justify-between gap-3">
+                        <span className="flex items-center gap-2 font-semibold text-navy-900">
+                          <IconStore size={17} className="text-slate-400" />
+                          Retirar en punto Limpiarte
+                        </span>
+                        <span className="font-semibold text-emerald-600">Gratis</span>
+                      </span>
+                      <span className="mt-1 block text-sm text-slate-600">Coordinamos contigo el punto y el horario de retiro.</span>
+                    </span>
+                  </span>
+                </label>
 
-            {form.shippingMethod === "DELIVERY" && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-stone-700">Quién recibe *</label>
-                  <input required value={form.shippingRecipient} onChange={(event) => update("shippingRecipient", event.target.value)} className={inputClass} />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-stone-700">Teléfono de contacto *</label>
-                  <input required value={form.shippingPhone} onChange={(event) => update("shippingPhone", event.target.value)} className={inputClass} />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-stone-700">Dirección *</label>
-                  <input required value={form.shippingLine1} onChange={(event) => update("shippingLine1", event.target.value)} className={inputClass} />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-stone-700">Complemento (apto, torre, referencia)</label>
-                  <input value={form.shippingLine2} onChange={(event) => update("shippingLine2", event.target.value)} className={inputClass} />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-stone-700">Ciudad *</label>
-                  <input
-                    required
-                    value={form.shippingCity}
-                    onChange={(event) => update("shippingCity", event.target.value)}
-                    onBlur={() => void requestQuote()}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-stone-700">Departamento *</label>
-                  <input
-                    required
-                    value={form.shippingState}
-                    onChange={(event) => update("shippingState", event.target.value)}
-                    onBlur={() => void requestQuote()}
-                    className={inputClass}
-                  />
-                </div>
+                {!pickup && selectedAddress && quote?.available === false && (
+                  <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    Aún no tenemos cobertura de despacho en {selectedAddress.city}. Puedes elegir retiro en punto o cambiar la dirección.
+                  </p>
+                )}
               </div>
+            </Panel>
+          )}
+
+          {step === 2 && (
+            <Panel title="Revisa cuándo llega tu compra">
+              <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+                  <span className="font-semibold text-navy-900">Envío 1</span>
+                  <span className="text-xs text-slate-400">
+                    {cart.itemCount} producto{cart.itemCount === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <label className="flex cursor-pointer items-center justify-between gap-3 px-5 py-4">
+                  <span className="flex items-center gap-3">
+                    <input type="radio" checked readOnly className="accent-brand-600" />
+                    <span>
+                      <span className="block font-medium text-navy-900">
+                        {pickup ? "Retiro en punto Limpiarte" : formatDeliveryRange(2, 5)}
+                      </span>
+                      <span className="block text-xs text-slate-500">
+                        {pickup ? "Te avisamos cuando esté listo" : `Enviamos a ${selectedAddress?.city ?? ""}`}
+                      </span>
+                    </span>
+                  </span>
+                  <span className={`font-semibold ${(quote?.rate ?? 0) === 0 ? "text-emerald-600" : "text-navy-900"}`}>
+                    {(quote?.rate ?? 0) === 0 ? "Gratis" : formatCOP(quote?.rate ?? 0)}
+                  </span>
+                </label>
+              </div>
+            </Panel>
+          )}
+
+          {step === 3 && (
+            <Panel title="Elige cómo pagar">
+              <div className="rounded-xl border border-slate-200 bg-white">
+                <label className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-5 py-4">
+                  <input type="radio" checked readOnly className="accent-brand-600" />
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                    <IconCreditCard size={18} />
+                  </span>
+                  <span className="flex-1">
+                    <span className="block font-medium text-navy-900">Pago en línea con Wompi</span>
+                    <span className="block text-xs text-slate-500">Tarjeta, PSE o Nequi. Entorno de prueba.</span>
+                  </span>
+                </label>
+                <p className="flex items-center gap-2 px-5 py-3 text-xs text-slate-500">
+                  <IconLock size={14} className="text-emerald-600" />
+                  Tus datos viajan cifrados. No almacenamos información de tu tarjeta.
+                </p>
+              </div>
+            </Panel>
+          )}
+
+          {errorMessage && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage}</p>}
+
+          <div className="flex items-center justify-between gap-3 pt-2">
+            {step > 1 ? (
+              <button
+                type="button"
+                onClick={() => setStep((current) => (current - 1) as Step)}
+                className="text-sm font-medium text-slate-500 hover:text-navy-900"
+              >
+                Volver
+              </button>
+            ) : (
+              <Link href="/carrito" className="text-sm font-medium text-slate-500 hover:text-navy-900">
+                Volver al carrito
+              </Link>
             )}
 
-            {form.shippingMethod === "DELIVERY" && quote && !quote.available && (
-              <p className="mt-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
-                Por ahora no tenemos cobertura de despacho en esa ciudad. Puedes elegir recoger en sede.
-              </p>
+            {step < 3 && (
+              <button
+                type="button"
+                onClick={() => setStep((current) => (current + 1) as Step)}
+                disabled={step === 1 && !canContinueDelivery}
+                className="flex items-center gap-2 rounded-lg bg-brand-500 px-7 py-3 font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Continuar
+                <IconTruck size={16} />
+              </button>
             )}
-            {form.shippingMethod === "DELIVERY" && quote?.available && (
-              <p className="mt-3 flex items-center gap-2 rounded-lg bg-brand-50 px-4 py-2 text-sm text-brand-800">
-                <IconCheckCircle size={16} className="shrink-0" />
-                {quote.freeShipping ? "¡Tu envío es gratis!" : `Costo de envío: ${formatCOP(quote.rate)}`}
-              </p>
-            )}
-          </section>
 
-          <section className="rounded-2xl border border-stone-200 bg-white p-6">
-            <h2 className="mb-4 text-lg font-bold text-navy-900">3. Datos de facturación (opcional)</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-stone-700">Nombre o razón social</label>
-                <input value={form.billingName} onChange={(event) => update("billingName", event.target.value)} className={inputClass} />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-stone-700">Empresa</label>
-                <input value={form.billingCompanyName} onChange={(event) => update("billingCompanyName", event.target.value)} className={inputClass} />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-stone-700">Tipo de documento</label>
-                <select
-                  value={form.billingDocumentType}
-                  onChange={(event) => update("billingDocumentType", event.target.value as CheckoutFormState["billingDocumentType"])}
-                  className={inputClass}
-                >
-                  <option value="">Selecciona…</option>
-                  <option value="CC">Cédula de ciudadanía</option>
-                  <option value="CE">Cédula de extranjería</option>
-                  <option value="NIT">NIT</option>
-                  <option value="PASSPORT">Pasaporte</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-stone-700">Número de documento / NIT</label>
-                <input value={form.billingDocumentNumber} onChange={(event) => update("billingDocumentNumber", event.target.value)} className={inputClass} />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-stone-700">Nota para tu pedido</label>
-                <textarea rows={2} value={form.customerNote} onChange={(event) => update("customerNote", event.target.value)} className={inputClass} />
-              </div>
-            </div>
-          </section>
+            {step === 3 && (
+              <button
+                type="button"
+                onClick={() => void submitOrder()}
+                disabled={submitting}
+                className="rounded-lg bg-brand-500 px-7 py-3 font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50"
+              >
+                {submitting ? "Procesando…" : "Confirmar compra"}
+              </button>
+            )}
+          </div>
         </div>
 
-        <aside className="h-fit space-y-4 rounded-2xl border border-stone-200 bg-white p-6">
-          <h2 className="text-lg font-bold text-navy-900">Tu pedido</h2>
-          <ul className="space-y-2 text-sm">
-            {cart.items.map((item) => (
-              <li key={item.id} className="flex justify-between gap-2">
-                <span className="text-stone-600">
-                  {item.name} {item.variantLabel && `(${item.variantLabel})`} × {item.quantity}
-                </span>
-                <span className="font-medium">{formatCOP(item.lineTotal)}</span>
-              </li>
-            ))}
-          </ul>
-          <dl className="space-y-2 border-t border-stone-100 pt-4 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-stone-600">Subtotal</dt>
-              <dd>{formatCOP(cart.subtotal)}</dd>
-            </div>
-            {cart.discountTotal > 0 && (
-              <div className="flex justify-between text-brand-700">
-                <dt>Descuento {cart.coupon && `(${cart.coupon.code})`}</dt>
-                <dd>−{formatCOP(cart.discountTotal)}</dd>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <dt className="text-stone-600">Envío</dt>
-              <dd>
-                {form.shippingMethod === "PICKUP"
-                  ? "Gratis (recoges en sede)"
-                  : quoting
-                    ? "Calculando…"
-                    : shippingCost === null
-                      ? "Por calcular"
-                      : shippingCost === 0
-                        ? "Gratis"
-                        : formatCOP(shippingCost)}
-              </dd>
-            </div>
-            <div className="flex justify-between border-t border-stone-100 pt-2 text-base font-bold text-navy-900">
-              <dt>Total</dt>
-              <dd>{formatCOP(grandTotal)}</dd>
-            </div>
-          </dl>
-
-          {errorMessage && <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{errorMessage}</p>}
-
-          <button
-            type="submit"
-            disabled={submitting || (form.shippingMethod === "DELIVERY" && quote !== null && !quote.available)}
-            className="w-full rounded-xl bg-brand-600 px-6 py-3 font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
-          >
-            {submitting ? "Creando pedido…" : "Continuar al pago"}
-          </button>
-          <p className="flex items-center justify-center gap-1.5 text-center text-xs text-stone-400">
-            <IconLock size={13} />
-            Pago procesado de forma segura
-          </p>
-        </aside>
-      </form>
+        <CheckoutSummary cart={cart} shippingRate={quote?.rate ?? null} freeShipping={quote?.freeShipping ?? false} />
+      </div>
     </div>
   );
 }

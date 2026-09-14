@@ -6,6 +6,7 @@ import { IconPause, IconPencil, IconPlay, IconTrash } from "../../../../componen
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 import { Paginated } from "../../../../lib/api/types";
 import { formatCOP, formatDate } from "../../../../lib/format";
+import { useAdminDialog } from "../../../../lib/admin/dialog-context";
 
 interface CouponRow {
   id: string;
@@ -36,6 +37,7 @@ const EMPTY_FORM = {
 export default function CouponsAdminPage(): React.ReactNode {
   const { data, reload } = useAdminGet<Paginated<CouponRow>>("/admin/coupons?perPage=50");
   const request = useAdminRequest();
+  const { confirm, notify } = useAdminDialog();
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -70,10 +72,18 @@ export default function CouponsAdminPage(): React.ReactNode {
     await reload();
   }
 
-  async function remove(id: string): Promise<void> {
-    if (!window.confirm("¿Eliminar este cupón?")) return;
-    await request(`/admin/coupons/${id}`, "DELETE");
-    await reload();
+  function remove(id: string, code: string): void {
+    confirm({
+      title: `¿Eliminar el cupón «${code}»?`,
+      description: "Dejará de aplicarse en el checkout de inmediato. Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar cupón",
+      tone: "danger",
+      successMessage: "El cupón se eliminó correctamente.",
+      action: async () => {
+        await request(`/admin/coupons/${id}`, "DELETE");
+        await reload();
+      }
+    });
   }
 
   return (
@@ -128,7 +138,7 @@ export default function CouponsAdminPage(): React.ReactNode {
                       <Button variant="ghost" onClick={() => void toggle(coupon)}>
                         {coupon.isActive ? <IconPause size={15} /> : <IconPlay size={15} />}
                       </Button>
-                      <Button variant="ghost" onClick={() => void remove(coupon.id)}>
+                      <Button variant="ghost" onClick={() => remove(coupon.id, coupon.code)}>
                         <IconTrash size={15} />
                       </Button>
                     </div>

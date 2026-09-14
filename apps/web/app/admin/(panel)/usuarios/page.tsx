@@ -5,6 +5,7 @@ import { Badge, Button, Card, EmptyState, Field, inputClass, Table } from "../..
 import { IconPause, IconPencil, IconPlay, IconShieldCheck, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 import { Paginated } from "../../../../lib/api/types";
+import { useAdminDialog } from "../../../../lib/admin/dialog-context";
 
 interface UserRow {
   id: string;
@@ -62,6 +63,7 @@ function UsersTab(): React.ReactNode {
   const { data: users, reload } = useAdminGet<Paginated<UserRow>>("/admin/users?perPage=50");
   const { data: roles } = useAdminGet<RoleRow[]>("/admin/roles");
   const request = useAdminRequest();
+  const { confirm, notify } = useAdminDialog();
   const [form, setForm] = useState(EMPTY_USER);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -82,18 +84,22 @@ function UsersTab(): React.ReactNode {
       await request(`/admin/users/${user.id}`, "PUT", { isActive: !user.isActive });
       await reload();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Error");
+      notify({ title: "No se pudo actualizar el usuario", description: error instanceof Error ? error.message : "Error", tone: "error" });
     }
   }
 
-  async function remove(id: string): Promise<void> {
-    if (!window.confirm("¿Eliminar este usuario?")) return;
-    try {
-      await request(`/admin/users/${id}`, "DELETE");
-      await reload();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Error");
-    }
+  function remove(id: string, name: string): void {
+    confirm({
+      title: `¿Eliminar al usuario ${name}?`,
+      description: "Perderá el acceso al panel de inmediato. Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar usuario",
+      tone: "danger",
+      successMessage: "El usuario se eliminó correctamente.",
+      action: async () => {
+        await request(`/admin/users/${id}`, "DELETE");
+        await reload();
+      }
+    });
   }
 
   return (
@@ -120,7 +126,7 @@ function UsersTab(): React.ReactNode {
                       <Button variant="ghost" title={user.isActive ? "Suspender" : "Reactivar"} onClick={() => void toggleActive(user)}>
                         {user.isActive ? <IconPause size={15} /> : <IconPlay size={15} />}
                       </Button>
-                      <Button variant="ghost" onClick={() => void remove(user.id)}>
+                      <Button variant="ghost" onClick={() => remove(user.id, `${user.firstName} ${user.lastName}`)}>
                         <IconTrash size={15} />
                       </Button>
                     </div>
@@ -170,6 +176,7 @@ function RolesTab(): React.ReactNode {
   const { data: roles, reload } = useAdminGet<RoleRow[]>("/admin/roles");
   const { data: permissions } = useAdminGet<PermissionRow[]>("/admin/roles/permissions");
   const request = useAdminRequest();
+  const { confirm } = useAdminDialog();
   const [form, setForm] = useState<{ name: string; description: string; permissionKeys: string[] }>({ name: "", description: "", permissionKeys: [] });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -231,11 +238,19 @@ function RolesTab(): React.ReactNode {
                     {!role.isSystem && (
                       <Button
                         variant="ghost"
-                        onClick={() => {
-                          void request(`/admin/roles/${role.id}`, "DELETE")
-                            .then(reload)
-                            .catch((error: unknown) => window.alert(error instanceof Error ? error.message : "Error"));
-                        }}
+                        onClick={() =>
+                          confirm({
+                            title: `¿Eliminar el rol «${role.name}»?`,
+                            description: "Los usuarios con este rol quedarán sin permisos asignados.",
+                            confirmLabel: "Eliminar rol",
+                            tone: "danger",
+                            successMessage: "El rol se eliminó correctamente.",
+                            action: async () => {
+                              await request(`/admin/roles/${role.id}`, "DELETE");
+                              await reload();
+                            }
+                          })
+                        }
                       >
                         <IconTrash size={15} />
                       </Button>

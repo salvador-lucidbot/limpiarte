@@ -2,7 +2,7 @@ import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Q
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { RequirePermissions } from "../../common/decorators/permissions.decorator";
 import { ProductStatus, User } from "../../generated/prisma/client";
-import { AdminProductQueryDto, BulkImportDto, CreateProductDto, UpdateProductDto } from "./dto/product.dto";
+import { AdminProductQueryDto, BulkImportDto, BulkStatusDto, CreateProductDto, UpdateProductDto } from "./dto/product.dto";
 import { ProductsAdminService } from "./products-admin.service";
 
 @Controller("admin/catalog/products")
@@ -54,5 +54,10 @@ export class ProductsAdminController {
   @Post("bulk-import")
   bulkImport(@Body() dto: BulkImportDto, @CurrentUser() actor: User): ReturnType<ProductsAdminService["bulkImport"]> {
     return this.productsService.bulkImport(dto, actor.id);
+  }
+
+  @Post("bulk-status")
+  bulkStatus(@Body() dto: BulkStatusDto, @CurrentUser() actor: User): ReturnType<ProductsAdminService["bulkSetStatus"]> {
+    return this.productsService.bulkSetStatus(dto, actor.id);
   }
 }

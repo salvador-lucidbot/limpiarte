@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsOptional, IsString, MinLength } from "class-validator";
+import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString, Max, Min, MinLength } from "class-validator";
 import { AddressType, DocumentType } from "../../../generated/prisma/enums";
 import { PaginationDto } from "../../../common/pagination/pagination.dto";
 
@@ -98,6 +98,22 @@ export class AddressDto {
   @IsOptional()
   @IsBoolean()
   isDefault?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude?: number;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
 
   @IsOptional()
   @IsEnum(DocumentType)

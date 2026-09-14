@@ -16,12 +16,15 @@ import {
   IconProps,
   IconSettings,
   IconShieldCheck,
+  IconStar,
   IconTag,
   IconTruck,
   IconUsers
 } from "../../../components/icons";
 import { Logo } from "../../../components/logo";
 import { useAdminAuth } from "../../../lib/auth/admin-auth-context";
+import { AdminDialogProvider } from "../../../lib/admin/dialog-context";
+import { Loader } from "../../../components/loader";
 
 interface NavItem {
   href: string;
@@ -38,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/pedidos", label: "Pedidos", icon: IconClipboardList, permission: "orders.view" },
   { href: "/admin/clientes", label: "Clientes", icon: IconUsers, permission: "customers.view" },
   { href: "/admin/cupones", label: "Cupones", icon: IconTag, permission: "marketing.manage" },
+  { href: "/admin/moderacion", label: "Reseñas y preguntas", icon: IconStar, permission: "content.manage" },
   { href: "/admin/contenido", label: "Contenido", icon: IconImage, permission: "content.manage" },
   { href: "/admin/envios", label: "Envíos", icon: IconTruck, permission: "settings.manage" },
   { href: "/admin/usuarios", label: "Usuarios y roles", icon: IconShieldCheck, permission: "users.manage" },
@@ -56,12 +60,13 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
   }, [ready, router, user]);
 
   if (!ready || !user) {
-    return <div className="flex min-h-screen items-center justify-center text-stone-400">Cargando…</div>;
+    return <Loader fullScreen className="min-h-screen" size="lg" />;
   }
 
   const visibleItems = NAV_ITEMS.filter((item) => item.permission === null || hasPermission(item.permission));
 
   return (
+    <AdminDialogProvider>
     <div className="flex min-h-screen bg-stone-100">
       <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col bg-navy-900 text-stone-300">
         <div className="border-b border-white/10 px-5 py-4">
@@ -103,5 +108,6 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
 
       <div className="ml-60 flex-1 p-8">{children}</div>
     </div>
+    </AdminDialogProvider>
   );
 }

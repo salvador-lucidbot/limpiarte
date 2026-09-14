@@ -6,6 +6,7 @@ import { IconRefresh } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 import { Paginated } from "../../../../lib/api/types";
 import { formatDate } from "../../../../lib/format";
+import { Loader } from "../../../../components/loader";
 
 interface ConnectionView {
   isConfigured: boolean;
@@ -166,7 +167,7 @@ export default function LucidBotPage(): React.ReactNode {
 
       <Card title="2. Eventos disponibles para automatización">
         {!events ? (
-          <EmptyState message="Cargando…" />
+          <Loader />
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {events.map((setting) => (

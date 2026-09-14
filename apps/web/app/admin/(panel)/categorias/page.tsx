@@ -1,10 +1,12 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
 import { IconCheckCircle, IconPause, IconPencil, IconPlay, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 import { slugify } from "../../../../components/admin/product-form";
+import { useAdminDialog } from "../../../../lib/admin/dialog-context";
+import { ImageUrlField } from "../../../../components/admin/image-upload";
 
 interface CategoryRow {
   id: string;
@@ -14,6 +16,7 @@ interface CategoryRow {
   position: number;
   isActive: boolean;
   bannerUrl: string | null;
+  description: string | null;
   _count: { products: number };
 }
 
@@ -23,12 +26,13 @@ interface BrandRow {
   slug: string;
 }
 
-const EMPTY_FORM = { name: "", slug: "", parentId: "", bannerUrl: "", position: "0" };
+const EMPTY_FORM = { name: "", slug: "", parentId: "", bannerUrl: "", position: "0", description: "" };
 
 export default function CategoriesAdminPage(): React.ReactNode {
   const { data: categories, reload } = useAdminGet<CategoryRow[]>("/admin/catalog/categories");
   const { data: brands, reload: reloadBrands } = useAdminGet<BrandRow[]>("/admin/catalog/brands");
   const request = useAdminRequest();
+  const { confirm, notify } = useAdminDialog();
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -43,6 +47,7 @@ export default function CategoriesAdminPage(): React.ReactNode {
       slug: form.slug || slugify(form.name),
       parentId: form.parentId || undefined,
       bannerUrl: form.bannerUrl || undefined,
+      description: form.description || undefined,
       position: Number(form.position || 0)
     };
     try {
@@ -56,14 +61,18 @@ export default function CategoriesAdminPage(): React.ReactNode {
     }
   }
 
-  async function remove(id: string): Promise<void> {
-    if (!window.confirm("¿Eliminar esta categoría?")) return;
-    try {
-      await request(`/admin/catalog/categories/${id}`, "DELETE");
-      await reload();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : "No se pudo eliminar");
-    }
+  function remove(id: string, name: string): void {
+    confirm({
+      title: `¿Eliminar la categoría «${name}»?`,
+      description: "Los productos asociados quedarán sin categoría. Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar categoría",
+      tone: "danger",
+      successMessage: "La categoría se eliminó correctamente.",
+      action: async () => {
+        await request(`/admin/catalog/categories/${id}`, "DELETE");
+        await reload();
+      }
+    });
   }
 
   async function toggleActive(category: CategoryRow): Promise<void> {
@@ -115,7 +124,8 @@ export default function CategoriesAdminPage(): React.ReactNode {
                             slug: category.slug,
                             parentId: category.parentId ?? "",
                             bannerUrl: category.bannerUrl ?? "",
-                            position: String(category.position)
+                            position: String(category.position),
+                            description: category.description ?? ""
                           });
                         }}
                       >
@@ -124,7 +134,7 @@ export default function CategoriesAdminPage(): React.ReactNode {
                       <Button variant="ghost" onClick={() => void toggleActive(category)}>
                         {category.isActive ? <IconPause size={15} /> : <IconPlay size={15} />}
                       </Button>
-                      <Button variant="ghost" onClick={() => void remove(category.id)}>
+                      <Button variant="ghost" onClick={() => remove(category.id, category.name)}>
                         <IconTrash size={15} />
                       </Button>
                     </div>
@@ -161,8 +171,20 @@ export default function CategoriesAdminPage(): React.ReactNode {
                     ))}
                 </select>
               </Field>
-              <Field label="Banner (URL)">
-                <input value={form.bannerUrl} onChange={(event) => setForm({ ...form, bannerUrl: event.target.value })} className={inputClass} />
+              <ImageUrlField
+                label="Imagen de la categoría"
+                value={form.bannerUrl}
+                onChange={(url) => setForm({ ...form, bannerUrl: url })}
+                hint="Se usa como fondo de la tarjeta en la portada. PNG sin fondo, cuadrada, 800×800 px."
+              />
+              <Field label="Descripción (texto SEO de la página de categoría)">
+                <textarea
+                  rows={4}
+                  value={form.description}
+                  onChange={(event) => setForm({ ...form, description: event.target.value })}
+                  placeholder="200–400 palabras sobre la categoría: qué incluye, para qué sirve, marcas…"
+                  className={inputClass}
+                />
               </Field>
               <Field label="Orden">
                 <input type="number" value={form.position} onChange={(event) => setForm({ ...form, position: event.target.value })} className={inputClass} />
@@ -196,7 +218,9 @@ export default function CategoriesAdminPage(): React.ReactNode {
                     onClick={() => {
                       void request(`/admin/catalog/brands/${brand.id}`, "DELETE")
                         .then(reloadBrands)
-                        .catch((error: unknown) => window.alert(error instanceof Error ? error.message : "Error"));
+                        .catch((error: unknown) =>
+                            notify({ title: "No se pudo guardar", description: error instanceof Error ? error.message : "Error", tone: "error" })
+                          );
                     }}
                   >
                     <IconTrash size={15} />

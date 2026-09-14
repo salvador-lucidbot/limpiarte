@@ -7,6 +7,7 @@ import { apiFetch } from "../../../../lib/api/client";
 import { ORDER_STATUS_LABELS, OrderView, Paginated } from "../../../../lib/api/types";
 import { useCustomerAuth } from "../../../../lib/auth/customer-auth-context";
 import { formatCOP, formatDate } from "../../../../lib/format";
+import { Loader } from "../../../../components/loader";
 
 export default function CustomerOrdersPage(): React.ReactNode {
   const { token, ready } = useCustomerAuth();
@@ -28,7 +29,7 @@ export default function CustomerOrdersPage(): React.ReactNode {
       <h1 className="mb-8 text-2xl font-bold text-navy-900">Mis pedidos</h1>
 
       {!orders ? (
-        <p className="text-stone-400">Cargando…</p>
+        <Loader />
       ) : orders.data.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-stone-300 p-16 text-center text-stone-500">
           Aún no tienes pedidos.{" "}

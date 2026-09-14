@@ -15,10 +15,18 @@ import {
   IconTag,
   IconTruck
 } from "../../components/icons";
+import { BrandsMarquee } from "../../components/store/brands-marquee";
+import { BuyAgainRow } from "../../components/store/buy-again-row";
 import { ProductCardView } from "../../components/store/product-card-view";
 import { apiFetch } from "../../lib/api/client";
 import { BannerView, CategoryNode, ProductCard } from "../../lib/api/types";
 import { formatCOP } from "../../lib/format";
+import { LogoMark } from "../../components/logo";
+
+interface BrandEntry {
+  id: string;
+  name: string;
+}
 
 async function safeFetch<T>(path: string, fallback: T): Promise<T> {
   try {
@@ -77,11 +85,12 @@ function HeroProductCard({ product, className }: { product: ProductCard; classNa
 }
 
 export default async function HomePage(): Promise<React.ReactNode> {
-  const [banners, categories, featured, promos] = await Promise.all([
+  const [banners, categories, featured, promos, brands] = await Promise.all([
     safeFetch<BannerView[]>("/content/banners", []),
     safeFetch<CategoryNode[]>("/catalog/categories", []),
     safeFetch<ProductCard[]>("/catalog/products/featured", []),
-    safeFetch<ProductCard[]>("/catalog/products/promos", [])
+    safeFetch<ProductCard[]>("/catalog/products/promos", []),
+    safeFetch<BrandEntry[]>("/catalog/brands", [])
   ]);
 
   const heroBanner = banners.find((banner) => banner.section === "HOME_HERO");
@@ -98,7 +107,7 @@ export default async function HomePage(): Promise<React.ReactNode> {
         <div className="pointer-events-none absolute -bottom-32 right-40 h-64 w-64 rounded-full bg-white/10" />
 
         <div className="relative grid items-center gap-8 px-6 py-12 sm:px-10 lg:grid-cols-[1.2fr_1fr] lg:py-16">
-          <div>
+          <div className="animate-rise">
             <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-white">
               <IconSparkles size={14} />
               Tienda oficial Limpiarte
@@ -123,13 +132,13 @@ export default async function HomePage(): Promise<React.ReactNode> {
                 className="inline-flex items-center gap-2 rounded-lg border border-white/50 px-6 py-3 font-semibold text-white transition hover:bg-white/10"
               >
                 <IconTag size={17} />
-                Ver ofertas
+                <span className="text-shine">Ver ofertas</span>
               </Link>
             </div>
           </div>
 
           {heroShowcase.length > 0 && (
-            <div className="relative hidden h-64 lg:block">
+            <div className="animate-rise-delay relative hidden h-64 lg:block">
               {heroShowcase[0] && <HeroProductCard product={heroShowcase[0]} className="absolute right-24 top-2 -rotate-2" />}
               {heroShowcase[1] && <HeroProductCard product={heroShowcase[1]} className="absolute -bottom-2 right-0 rotate-1" />}
               <span className="absolute left-4 top-1/2 flex h-24 w-24 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white/70">
@@ -159,22 +168,41 @@ export default async function HomePage(): Promise<React.ReactNode> {
         ))}
       </section>
 
+      <BuyAgainRow />
+
       {categories.length > 0 && (
         <section className="mt-12">
           <SectionHeader title="Compra por categoría" href="/tienda" linkLabel="Ver todas" />
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-            {categories.slice(0, 7).map((category) => (
-              <Link
-                key={category.id}
-                href={`/tienda?category=${category.slug}`}
-                className="group flex flex-col items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 py-5 text-center transition hover:border-brand-300 hover:shadow-md"
-              >
-                <span className="flex h-13 w-13 items-center justify-center rounded-full bg-brand-50 text-brand-500 transition group-hover:bg-brand-500 group-hover:text-white">
-                  <CategoryIcon slug={category.slug} />
-                </span>
-                <span className="text-sm font-medium leading-tight text-slate-700 group-hover:text-brand-700">{category.name}</span>
-              </Link>
-            ))}
+          <div className="group/cats relative">
+            <span className="pointer-events-none fixed inset-0 z-30 bg-navy-900/45 opacity-0 transition-opacity duration-300 group-hover/cats:opacity-100" />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+              {categories.slice(0, 7).map((category) => (
+                <Link
+                  key={category.id}
+                  href={`/tienda?category=${category.slug}`}
+                  className="group/tile relative z-0 flex flex-col items-center gap-2 rounded-2xl px-1 py-2 text-center transition-all duration-300 ease-out hover:z-[35] hover:-translate-y-1.5"
+                >
+                  <span className="relative block aspect-square w-full">
+                    <span className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_45%,rgba(41,171,226,0.55),transparent_68%)] opacity-0 blur-2xl transition-opacity duration-300 group-hover/tile:opacity-100" />
+                    {category.bannerUrl ? (
+                      <img
+                        src={category.bannerUrl}
+                        alt=""
+                        loading="lazy"
+                        className="relative h-full w-full object-contain drop-shadow-none transition-transform duration-500 ease-out group-hover/tile:scale-110 group-hover/tile:drop-shadow-[0_12px_24px_rgba(14,47,70,0.35)]"
+                      />
+                    ) : (
+                      <span className="relative flex h-full w-full items-center justify-center text-brand-300 transition-transform duration-500 ease-out group-hover/tile:scale-110">
+                        <CategoryIcon slug={category.slug} />
+                      </span>
+                    )}
+                  </span>
+                  <span className="rounded-full px-3 py-1 text-sm font-semibold leading-tight tracking-tight text-navy-900 transition-all duration-300 group-hover/tile:bg-brand-500 group-hover/tile:text-white group-hover/tile:shadow-lg group-hover/tile:shadow-brand-500/40">
+                    {category.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
       )}
@@ -215,8 +243,25 @@ export default async function HomePage(): Promise<React.ReactNode> {
         </section>
       )}
 
-      <section className="mt-14 overflow-hidden rounded-2xl bg-navy-900">
-        <div className="grid items-center gap-8 px-6 py-10 sm:px-10 lg:grid-cols-[1.3fr_1fr]">
+      <BrandsMarquee brands={brands} />
+
+      <section className="relative mt-14 overflow-hidden rounded-2xl bg-navy-900">
+        <img
+          src="/casa-limpiarte.webp"
+          alt=""
+          aria-hidden
+          loading="lazy"
+          className="pointer-events-none absolute inset-y-0 right-0 hidden h-full w-[58%] object-cover lg:block"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 hidden lg:block"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, #0e2f46 0%, #0e2f46 46%, rgba(14,47,70,0.86) 66%, rgba(14,47,70,0.62) 100%)"
+          }}
+        />
+        <div className="relative grid items-center gap-8 px-6 py-10 sm:px-10 lg:grid-cols-[1.3fr_1fr]">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-400">Más que productos</p>
             <h2 className="text-2xl font-bold text-white sm:text-3xl">¿Prefieres que limpiemos por ti?</h2>
@@ -243,19 +288,33 @@ export default async function HomePage(): Promise<React.ReactNode> {
               </a>
             </div>
           </div>
-          <div className="hidden grid-cols-3 gap-3 lg:grid">
-            {[
-              { icon: IconHomeHeart, label: "Hogares" },
-              { icon: IconBuilding, label: "Empresas" },
-              { icon: IconCalendar, label: "Planes mensuales" }
-            ].map((item) => (
-              <div key={item.label} className="flex flex-col items-center gap-2.5 rounded-xl bg-white/5 px-3 py-6 text-center">
-                <span className="text-brand-400">
-                  <item.icon size={30} />
-                </span>
-                <span className="text-sm font-medium text-slate-200">{item.label}</span>
-              </div>
-            ))}
+          <div className="relative hidden self-end justify-center lg:-mb-10 lg:flex">
+            <span className="pointer-events-none absolute inset-x-0 top-2 flex -translate-x-[290px] -translate-y-5 justify-center opacity-[0.12]">
+              <LogoMark variant="white" height={300} />
+            </span>
+            <span className="pointer-events-none absolute bottom-0 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-brand-500/25 blur-3xl" />
+            <span className="relative block w-full max-w-sm">
+              <img
+                src="/equipo-limpiarte.webp"
+                alt="Equipo de profesionales de Limpiarte"
+                loading="lazy"
+                className="w-full object-contain drop-shadow-[0_18px_35px_rgba(0,0,0,0.45)]"
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-brand-400/35 mix-blend-color"
+                style={{
+                  maskImage: "url(/equipo-limpiarte.webp)",
+                  WebkitMaskImage: "url(/equipo-limpiarte.webp)",
+                  maskSize: "contain",
+                  WebkitMaskSize: "contain",
+                  maskRepeat: "no-repeat",
+                  WebkitMaskRepeat: "no-repeat",
+                  maskPosition: "center",
+                  WebkitMaskPosition: "center"
+                }}
+              />
+            </span>
           </div>
         </div>
       </section>

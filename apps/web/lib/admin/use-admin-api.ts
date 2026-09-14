@@ -39,6 +39,26 @@ export function useAdminGet<T>(path: string | null): AdminGetState<T> {
   return { data, loading, error, reload };
 }
 
+export interface UploadedImageResult {
+  fileName: string;
+  url: string;
+  size: number;
+  mimeType: string;
+}
+
+export function useAdminUpload(): (file: File) => Promise<UploadedImageResult> {
+  const { token } = useAdminAuth();
+
+  return useCallback(
+    (file: File): Promise<UploadedImageResult> => {
+      const payload = new FormData();
+      payload.append("file", file);
+      return apiFetch<UploadedImageResult>("/admin/uploads", { method: "POST", body: payload, token, revalidate: false });
+    },
+    [token]
+  );
+}
+
 export function useAdminRequest(): <T>(path: string, method: "POST" | "PUT" | "DELETE", body?: unknown) => Promise<T> {
   const { token } = useAdminAuth();
 

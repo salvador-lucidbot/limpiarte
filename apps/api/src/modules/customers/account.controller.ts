@@ -53,6 +53,9 @@ export class AccountController {
         state: dto.state,
         postalCode: dto.postalCode,
         isDefault: dto.isDefault ?? false,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        notes: dto.notes,
         documentType: dto.documentType,
         documentNumber: dto.documentNumber,
         companyName: dto.companyName

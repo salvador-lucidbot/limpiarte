@@ -37,6 +37,7 @@ export class StripeGateway implements PaymentGateway {
       externalId: intent.id,
       clientSecret: intent.client_secret,
       publicKey: process.env.STRIPE_PUBLIC_KEY ?? null,
+      redirectUrl: null,
       requiresOnlinePayment: true
     };
   }

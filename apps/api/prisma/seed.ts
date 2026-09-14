@@ -14,7 +14,8 @@ function buildAdapter(): PrismaMariaDb {
     user: decodeURIComponent(parsed.username),
     password: decodeURIComponent(parsed.password),
     database: parsed.pathname.replace(/^\//, ""),
-    connectionLimit: 5
+    connectionLimit: 5,
+    initSql: "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
   });
 }
 

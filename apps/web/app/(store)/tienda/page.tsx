@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { CatalogFilters, CatalogSort } from "../../../components/store/catalog-filters";
+import { MobileFilters } from "../../../components/store/mobile-filters";
 import { ProductCardView } from "../../../components/store/product-card-view";
-import { IconChevronDown } from "../../../components/icons";
 import { apiFetch } from "../../../lib/api/client";
-import { CatalogListing } from "../../../lib/api/types";
+import { CatalogListing, CategoryNode } from "../../../lib/api/types";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -31,18 +31,26 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
   query.set("perPage", "24");
 
   let listing = EMPTY_LISTING;
+  let categoryTree: CategoryNode[] = [];
   try {
-    listing = await apiFetch<CatalogListing>(`/catalog/products?${query.toString()}`, { revalidate: 60 });
+    [listing, categoryTree] = await Promise.all([
+      apiFetch<CatalogListing>(`/catalog/products?${query.toString()}`, { revalidate: 60 }),
+      apiFetch<CategoryNode[]>("/catalog/categories", { revalidate: 300 })
+    ]);
   } catch {
     listing = EMPTY_LISTING;
   }
 
   const activeCategorySlug = firstValue(params.category);
+  const activeCategory = activeCategorySlug
+    ? categoryTree.flatMap((node) => [node, ...node.children]).find((node) => node.slug === activeCategorySlug)
+    : undefined;
   const searchTerm = firstValue(params.q);
   const promoOnly = firstValue(params.onPromo) === "true";
 
   const categoryName = activeCategorySlug
-    ? (listing.facets.categories.find((option) => option.slug === activeCategorySlug)?.name ??
+    ? (activeCategory?.name ??
+      listing.facets.categories.find((option) => option.slug === activeCategorySlug)?.name ??
       listing.data.find((product) => product.categorySlug === activeCategorySlug)?.categoryName ??
       null)
     : null;
@@ -78,13 +86,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
 
       <div className="grid gap-8 lg:grid-cols-[250px_1fr]">
         <div>
-          <details className="group rounded-lg border border-slate-200 bg-white lg:hidden">
-            <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold text-navy-900">
-              Filtrar resultados
-              <IconChevronDown size={16} className="transition group-open:rotate-180" />
-            </summary>
-            <div className="border-t border-slate-100 p-4">{filtersPanel}</div>
-          </details>
+          <MobileFilters facets={listing.facets} listingTitle={listingTitle} total={listing.meta.total} />
           <div className="hidden lg:block">{filtersPanel}</div>
         </div>
 
@@ -110,6 +112,13 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
               {listing.data.map((product) => (
                 <ProductCardView key={product.id} product={product} />
               ))}
+            </div>
+          )}
+
+          {activeCategory?.description && (
+            <div className="mt-10 max-w-3xl rounded-xl border border-slate-200 bg-white p-6">
+              <h2 className="text-lg font-bold text-navy-900">Sobre {activeCategory.name.toLowerCase()}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{activeCategory.description}</p>
             </div>
           )}
 

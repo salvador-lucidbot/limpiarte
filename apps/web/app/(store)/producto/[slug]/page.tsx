@@ -1,12 +1,22 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { IconDroplets } from "../../../../components/icons";
 import { ProductCardView } from "../../../../components/store/product-card-view";
+import { ProductGallery } from "../../../../components/store/product-gallery";
 import { ProductPurchasePanel } from "../../../../components/store/product-purchase-panel";
+import { QuestionsSection } from "../../../../components/store/questions-section";
+import { RatingStars } from "../../../../components/store/rating-stars";
+import { ReviewsSection } from "../../../../components/store/reviews-section";
+import { WishlistButton } from "../../../../components/store/wishlist-button";
 import { ApiError, apiFetch } from "../../../../lib/api/client";
 import { ProductDetail } from "../../../../lib/api/types";
 
 type Params = Promise<{ slug: string }>;
+
+interface PurchaseExtras {
+  guaranteeText: string;
+  leadTimeMinDays: number;
+  leadTimeMaxDays: number;
+}
 
 async function loadProduct(slug: string): Promise<ProductDetail | null> {
   try {
@@ -14,6 +24,29 @@ async function loadProduct(slug: string): Promise<ProductDetail | null> {
   } catch (error) {
     if (error instanceof ApiError && error.statusCode === 404) return null;
     throw error;
+  }
+}
+
+async function loadPurchaseExtras(): Promise<PurchaseExtras> {
+  const fallback: PurchaseExtras = {
+    guaranteeText: "Producto garantizado · Devolución fácil dentro de los 5 días.",
+    leadTimeMinDays: 1,
+    leadTimeMaxDays: 3
+  };
+
+  try {
+    const settings = await apiFetch<Record<string, unknown>>("/settings/public", { revalidate: 300 });
+    const guarantee = settings["store.guaranteeText"];
+    const minDays = Number(settings["shipping.leadTimeMinDays"]);
+    const maxDays = Number(settings["shipping.leadTimeMaxDays"]);
+
+    return {
+      guaranteeText: typeof guarantee === "string" && guarantee.length > 0 ? guarantee : fallback.guaranteeText,
+      leadTimeMinDays: Number.isFinite(minDays) && minDays > 0 ? minDays : fallback.leadTimeMinDays,
+      leadTimeMaxDays: Number.isFinite(maxDays) && maxDays > 0 ? maxDays : fallback.leadTimeMaxDays
+    };
+  } catch {
+    return fallback;
   }
 }
 
@@ -35,7 +68,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function ProductPage({ params }: { params: Params }): Promise<React.ReactNode> {
   const { slug } = await params;
-  const product = await loadProduct(slug);
+  const [product, extras] = await Promise.all([loadProduct(slug), loadPurchaseExtras()]);
   if (!product) notFound();
 
   const technicalRows = [
@@ -54,6 +87,10 @@ export default async function ProductPage({ params }: { params: Params }): Promi
     image: product.images.map((image) => image.url),
     sku: product.sku ?? undefined,
     brand: product.brandName ? { "@type": "Brand", name: product.brandName } : undefined,
+    aggregateRating:
+      product.rating !== null && product.reviewCount > 0
+        ? { "@type": "AggregateRating", ratingValue: product.rating, reviewCount: product.reviewCount }
+        : undefined,
     offers: {
       "@type": "Offer",
       priceCurrency: "COP",
@@ -81,35 +118,27 @@ export default async function ProductPage({ params }: { params: Params }): Promi
       </nav>
 
       <div className="grid gap-10 lg:grid-cols-2">
-        <div>
-          <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
-            {product.images[0] ? (
-              <img src={product.images[0].url} alt={product.images[0].alt ?? product.name} className="aspect-square w-full object-cover" />
-            ) : (
-              <div className="flex aspect-square items-center justify-center bg-gradient-to-b from-brand-50 to-slate-50 text-brand-200">
-                <IconDroplets size={110} strokeWidth={1} />
-              </div>
-            )}
-          </div>
-          {product.images.length > 1 && (
-            <div className="mt-3 grid grid-cols-5 gap-2">
-              {product.images.slice(0, 5).map((image) => (
-                <img
-                  key={image.url}
-                  src={image.url}
-                  alt={image.alt ?? product.name}
-                  className="aspect-square w-full rounded-lg border border-stone-200 object-cover"
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        <ProductGallery images={product.images} productName={product.name} />
 
         <div>
-          {product.brandName && <p className="text-sm uppercase tracking-wide text-brand-600">{product.brandName}</p>}
-          <h1 className="mb-4 mt-1 text-3xl font-bold text-navy-900">{product.name}</h1>
-          {product.description && <p className="mb-6 leading-relaxed text-stone-600">{product.description}</p>}
-          <ProductPurchasePanel product={product} />
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              {product.brandName && <p className="text-sm uppercase tracking-wide text-brand-600">{product.brandName}</p>}
+              <h1 className="mt-1 text-3xl font-bold text-navy-900">{product.name}</h1>
+            </div>
+            <WishlistButton productId={product.id} productName={product.name} className="mt-1 shrink-0" size={19} />
+          </div>
+
+          {product.rating !== null && product.reviewCount > 0 && (
+            <a href="#resenas" className="mt-2 flex w-fit items-center gap-2 text-sm text-slate-500 hover:text-brand-600">
+              <RatingStars rating={product.rating} size={15} />
+              <span className="font-semibold text-navy-900">{product.rating.toFixed(1)}</span>
+              <span>({product.reviewCount} opiniones)</span>
+            </a>
+          )}
+
+          {product.description && <p className="mb-6 mt-4 leading-relaxed text-stone-600">{product.description}</p>}
+          <ProductPurchasePanel product={product} extras={extras} />
         </div>
       </div>
 
@@ -144,6 +173,9 @@ export default async function ProductPage({ params }: { params: Params }): Promi
           </div>
         </section>
       )}
+
+      <ReviewsSection productId={product.id} productSlug={product.slug} />
+      <QuestionsSection productId={product.id} productSlug={product.slug} />
 
       {product.related.length > 0 && (
         <section className="mt-14">

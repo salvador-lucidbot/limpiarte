@@ -30,6 +30,10 @@ const DEFAULT_TEMPLATES: Record<string, { subject: string; htmlBody: string }> =
   order_status_changed: {
     subject: "Actualización de tu pedido {{orderNumber}} — {{storeName}}",
     htmlBody: "<p>Hola {{name}},</p><p>Tu pedido <strong>{{orderNumber}}</strong> cambió de estado a: <strong>{{status}}</strong>.</p>"
+  },
+  back_in_stock: {
+    subject: "¡{{productName}} está disponible de nuevo! — {{storeName}}",
+    htmlBody: "<p>¡Buenas noticias!</p><p><strong>{{productName}}</strong> volvió a estar disponible en nuestra tienda.</p><p><a href=\"{{productUrl}}\">Compra ahora antes de que se agote de nuevo</a></p>"
   }
 };
 
@@ -57,11 +61,11 @@ export class MailService {
     return this.transporter;
   }
 
-  async sendTemplate(templateKey: string, to: string, variables: Record<string, string>): Promise<void> {
+  async sendTemplate(templateKey: string, to: string, variables: Record<string, string>): Promise<boolean> {
     const transporter = this.getTransporter();
     if (!transporter) {
       this.logger.warn(`SMTP no configurado; correo "${templateKey}" a ${to} omitido`);
-      return;
+      return false;
     }
 
     const stored = await this.prisma.emailTemplate.findFirst({ where: { key: templateKey, isActive: true } });
@@ -69,7 +73,7 @@ export class MailService {
     const template = stored ?? fallback;
     if (!template) {
       this.logger.warn(`Plantilla de correo desconocida: ${templateKey}`);
-      return;
+      return false;
     }
 
     const storeName = process.env.MAIL_FROM_NAME ?? "Limpiarte";
@@ -85,8 +89,10 @@ export class MailService {
         subject,
         html
       });
+      return true;
     } catch (error) {
       this.logger.error(`Fallo enviando correo "${templateKey}" a ${to}`, error instanceof Error ? error.stack : String(error));
+      return false;
     }
   }
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Post, UnauthorizedException } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { CurrentCustomer } from "../../common/decorators/current-customer.decorator";
 import { Public } from "../../common/decorators/public.decorator";
@@ -14,6 +14,7 @@ export class CheckoutController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post()
   checkout(@Body() dto: CheckoutDto, @CurrentCustomer() customer: Customer | undefined): Promise<CheckoutResult> {
-    return this.ordersService.checkout(dto, customer?.id ?? null);
+    if (!customer) throw new UnauthorizedException("Inicia sesión para completar la compra");
+    return this.ordersService.checkout(dto, customer.id);
   }
 }

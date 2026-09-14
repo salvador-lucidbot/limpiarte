@@ -6,6 +6,7 @@ import { PrismaExceptionFilter } from "./common/filters/prisma-exception.filter"
 import { AuthGuard } from "./common/guards/auth.guard";
 import { PermissionsGuard } from "./common/guards/permissions.guard";
 import { SecurityModule } from "./common/security/security.module";
+import { AnalyticsModule } from "./modules/analytics/analytics.module";
 import { AuditModule } from "./modules/audit/audit.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { CartModule } from "./modules/cart/cart.module";
@@ -23,6 +24,7 @@ import { ReportsModule } from "./modules/reports/reports.module";
 import { RolesModule } from "./modules/roles/roles.module";
 import { SettingsModule } from "./modules/settings/settings.module";
 import { ShippingModule } from "./modules/shipping/shipping.module";
+import { UploadsModule } from "./modules/uploads/uploads.module";
 import { UsersModule } from "./modules/users/users.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
@@ -49,7 +51,9 @@ import { PrismaModule } from "./prisma/prisma.module";
     MarketingModule,
     ReportsModule,
     SettingsModule,
-    ContactModule
+    ContactModule,
+    UploadsModule,
+    AnalyticsModule
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

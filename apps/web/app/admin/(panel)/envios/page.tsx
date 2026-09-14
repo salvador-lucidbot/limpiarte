@@ -5,6 +5,7 @@ import { Badge, Button, Card, EmptyState, Field, inputClass, Table } from "../..
 import { IconPencil, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 import { formatCOP } from "../../../../lib/format";
+import { useAdminDialog } from "../../../../lib/admin/dialog-context";
 
 interface ZoneRow {
   id: string;
@@ -32,6 +33,7 @@ function parseCities(text: string): { city: string; state: string }[] {
 export default function ShippingAdminPage(): React.ReactNode {
   const { data: zones, reload } = useAdminGet<ZoneRow[]>("/admin/shipping/zones");
   const request = useAdminRequest();
+  const { confirm } = useAdminDialog();
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -98,10 +100,19 @@ export default function ShippingAdminPage(): React.ReactNode {
                       </Button>
                       <Button
                         variant="ghost"
-                        onClick={() => {
-                          if (!window.confirm("¿Eliminar esta zona?")) return;
-                          void request(`/admin/shipping/zones/${zone.id}`, "DELETE").then(reload);
-                        }}
+                        onClick={() =>
+                          confirm({
+                            title: `¿Eliminar la zona «${zone.name}»?`,
+                            description: "Los pedidos nuevos no podrán cotizar envío a esas ciudades.",
+                            confirmLabel: "Eliminar zona",
+                            tone: "danger",
+                            successMessage: "La zona de envío se eliminó correctamente.",
+                            action: async () => {
+                              await request(`/admin/shipping/zones/${zone.id}`, "DELETE");
+                              await reload();
+                            }
+                          })
+                        }
                       >
                         <IconTrash size={15} />
                       </Button>

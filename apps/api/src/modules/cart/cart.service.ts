@@ -22,6 +22,15 @@ export interface CartItemView {
   allowBackorder: boolean;
 }
 
+export interface CartSuggestion {
+  id: string;
+  slug: string;
+  name: string;
+  price: number;
+  imageUrl: string | null;
+  inStock: boolean;
+}
+
 export interface CartView {
   id: string;
   sessionToken: string;
@@ -34,6 +43,8 @@ export interface CartView {
   coupon: { code: string; discount: number } | null;
   couponError: string | null;
   shipping: { available: boolean; rate: number; freeShipping: boolean } | null;
+  freeShippingThreshold: number | null;
+  suggestions: CartSuggestion[];
 }
 
 type CartWithItems = Prisma.CartGetPayload<{
@@ -41,7 +52,7 @@ type CartWithItems = Prisma.CartGetPayload<{
     coupon: true;
     items: {
       include: {
-        product: { include: { images: true; category: true } };
+        product: { include: { images: true } };
         variant: { include: { optionValues: { include: { optionValue: true } } } };
       };
     };
@@ -52,15 +63,21 @@ const CART_INCLUDE = {
   coupon: true,
   items: {
     include: {
-      product: { include: { images: { orderBy: { position: "asc" }, take: 1 }, category: true } },
+      product: { include: { images: { orderBy: { position: "asc" }, take: 1 } } },
       variant: { include: { optionValues: { include: { optionValue: true } } } }
     },
     orderBy: { createdAt: "asc" }
   }
 } satisfies Prisma.CartInclude;
 
+const FREE_SHIPPING_CACHE_MS = 60_000;
+const SUGGESTIONS_CACHE_MS = 300_000;
+
 @Injectable()
 export class CartService {
+  private freeShippingCache: { value: number | null; expiresAt: number } | null = null;
+  private readonly suggestionsCache = new Map<string, { value: CartSuggestion[]; expiresAt: number }>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly pricingService: PricingService,
@@ -75,7 +92,8 @@ export class CartService {
         include: CART_INCLUDE
       });
       if (customerCart) {
-        if (sessionToken && customerCart.sessionToken !== sessionToken) await this.mergeGuestCart(sessionToken, customerCart.id);
+        if (!sessionToken || customerCart.sessionToken === sessionToken) return customerCart;
+        await this.mergeGuestCart(sessionToken, customerCart.id);
         return this.reload(customerCart.id);
       }
 
@@ -86,7 +104,7 @@ export class CartService {
         });
         if (guestCart) {
           await this.prisma.cart.update({ where: { id: guestCart.id }, data: { customerId } });
-          return this.reload(guestCart.id);
+          return { ...guestCart, customerId };
         }
       }
 
@@ -99,10 +117,9 @@ export class CartService {
         include: CART_INCLUDE
       });
       if (cart) {
-        if (cart.status === CartStatus.ABANDONED) {
-          await this.prisma.cart.update({ where: { id: cart.id }, data: { status: CartStatus.ACTIVE, abandonedAt: null } });
-        }
-        return this.reload(cart.id);
+        if (cart.status !== CartStatus.ABANDONED) return cart;
+        await this.prisma.cart.update({ where: { id: cart.id }, data: { status: CartStatus.ACTIVE, abandonedAt: null } });
+        return { ...cart, status: CartStatus.ACTIVE, abandonedAt: null };
       }
     }
 
@@ -110,32 +127,43 @@ export class CartService {
   }
 
   async addItem(sessionToken: string, customerId: string | null, productId: string, variantId: string | null, quantity: number): Promise<CartView> {
-    const cart = await this.getOrCreate(sessionToken, customerId);
-
-    const product = await this.prisma.product.findFirst({
-      where: { id: productId, deletedAt: null, status: ProductStatus.ACTIVE },
-      include: { variants: true }
-    });
+    const [cart, product] = await Promise.all([
+      this.getOrCreate(sessionToken, customerId),
+      this.prisma.product.findFirst({
+        where: { id: productId, deletedAt: null, status: ProductStatus.ACTIVE },
+        include: {
+          images: { orderBy: { position: "asc" }, take: 1 },
+          variants: { include: { optionValues: { include: { optionValue: true } } } }
+        }
+      })
+    ]);
     if (!product) throw new BadRequestException("Producto no disponible");
 
     const variant = variantId ? product.variants.find((candidate) => candidate.id === variantId && candidate.isActive) : null;
     if (variantId && !variant) throw new BadRequestException("Variante no disponible");
     if (product.variants.length > 0 && !variantId) throw new BadRequestException("Selecciona una presentación");
 
-    const existing = await this.findItem(cart.id, productId, variantId);
+    const existing = cart.items.find((item) => item.productId === productId && item.variantId === variantId) ?? null;
     const newQuantity = (existing?.quantity ?? 0) + quantity;
 
     this.assertStock(product.allowBackorder, variant ? variant.stock : product.stock, newQuantity);
 
     if (existing) {
-      await this.prisma.cartItem.update({ where: { id: existing.id }, data: { quantity: newQuantity } });
-    }
-    if (!existing) {
-      await this.prisma.cartItem.create({ data: { cartId: cart.id, productId, variantId, quantity } });
+      const [updated] = await Promise.all([
+        this.prisma.cartItem.update({ where: { id: existing.id }, data: { quantity: newQuantity } }),
+        this.touch(cart.id)
+      ]);
+      existing.quantity = updated.quantity;
+      return this.buildView(cart);
     }
 
-    await this.touch(cart.id);
-    return this.buildView(await this.reload(cart.id));
+    const [created] = await Promise.all([
+      this.prisma.cartItem.create({ data: { cartId: cart.id, productId, variantId, quantity } }),
+      this.touch(cart.id)
+    ]);
+
+    cart.items.push({ ...created, product, variant: variant ?? null });
+    return this.buildView(cart);
   }
 
   async updateItem(sessionToken: string, itemId: string, quantity: number, variantId?: string): Promise<CartView> {
@@ -145,19 +173,25 @@ export class CartService {
 
     const targetVariantId = variantId !== undefined ? variantId : item.variantId;
     const variant = targetVariantId
-      ? await this.prisma.productVariant.findFirst({ where: { id: targetVariantId, productId: item.productId, isActive: true } })
+      ? await this.prisma.productVariant.findFirst({
+          where: { id: targetVariantId, productId: item.productId, isActive: true },
+          include: { optionValues: { include: { optionValue: true } } }
+        })
       : null;
     if (targetVariantId && !variant) throw new BadRequestException("Variante no disponible");
 
     this.assertStock(item.product.allowBackorder, variant ? variant.stock : item.product.stock, quantity);
 
-    await this.prisma.cartItem.update({
-      where: { id: itemId },
-      data: { quantity, variantId: targetVariantId }
-    });
+    const [updated] = await Promise.all([
+      this.prisma.cartItem.update({ where: { id: itemId }, data: { quantity, variantId: targetVariantId } }),
+      this.touch(cart.id)
+    ]);
 
-    await this.touch(cart.id);
-    return this.buildView(await this.reload(cart.id));
+    item.quantity = updated.quantity;
+    item.variantId = updated.variantId;
+    item.variant = variant;
+
+    return this.buildView(cart);
   }
 
   async removeItem(sessionToken: string, itemId: string): Promise<CartView> {
@@ -165,9 +199,9 @@ export class CartService {
     const item = cart.items.find((candidate) => candidate.id === itemId);
     if (!item) throw new NotFoundException("Ítem no encontrado");
 
-    await this.prisma.cartItem.delete({ where: { id: itemId } });
-    await this.touch(cart.id);
-    return this.buildView(await this.reload(cart.id));
+    await Promise.all([this.prisma.cartItem.delete({ where: { id: itemId } }), this.touch(cart.id)]);
+    cart.items = cart.items.filter((candidate) => candidate.id !== itemId);
+    return this.buildView(cart);
   }
 
   async applyCoupon(sessionToken: string, code: string, customerId: string | null): Promise<CartView> {
@@ -256,6 +290,11 @@ export class CartService {
       shipping = { available: quote.available, rate: quote.rate, freeShipping: quote.freeShipping };
     }
 
+    const [freeShippingThreshold, suggestions] = await Promise.all([
+      this.minFreeShippingThreshold(),
+      this.buildSuggestions(cart)
+    ]);
+
     return {
       id: cart.id,
       sessionToken: cart.sessionToken ?? "",
@@ -267,8 +306,84 @@ export class CartService {
       total,
       coupon: couponView,
       couponError,
-      shipping
+      shipping,
+      freeShippingThreshold,
+      suggestions
     };
+  }
+
+  private async minFreeShippingThreshold(): Promise<number | null> {
+    if (this.freeShippingCache && Date.now() < this.freeShippingCache.expiresAt) {
+      return this.freeShippingCache.value;
+    }
+
+    const zones = await this.prisma.shippingZone.findMany({
+      where: { isActive: true, freeShippingThreshold: { not: null } },
+      select: { freeShippingThreshold: true }
+    });
+
+    const thresholds = zones
+      .map((zone) => (zone.freeShippingThreshold !== null ? Number(zone.freeShippingThreshold) : null))
+      .filter((value): value is number => value !== null);
+
+    const value = thresholds.length === 0 ? null : Math.min(...thresholds);
+    this.freeShippingCache = { value, expiresAt: Date.now() + FREE_SHIPPING_CACHE_MS };
+    return value;
+  }
+
+  private async buildSuggestions(cart: CartWithItems): Promise<CartSuggestion[]> {
+    const productIds = cart.items.map((item) => item.productId);
+    if (productIds.length === 0) return [];
+
+    const cacheKey = [...productIds].sort().join(",");
+    const cached = this.suggestionsCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) return cached.value;
+
+    const relations = await this.prisma.productRelation.findMany({
+      where: {
+        productId: { in: productIds },
+        relatedProductId: { notIn: productIds },
+        relatedProduct: { deletedAt: null, status: ProductStatus.ACTIVE }
+      },
+      include: {
+        relatedProduct: {
+          include: {
+            images: { orderBy: { position: "asc" }, take: 1 },
+            variants: { where: { isActive: true }, select: { stock: true } }
+          }
+        }
+      },
+      take: 12
+    });
+
+    const seen = new Set<string>();
+    const suggestions: CartSuggestion[] = [];
+
+    for (const relation of relations) {
+      const product = relation.relatedProduct;
+      if (seen.has(product.id)) continue;
+      seen.add(product.id);
+
+      const totalStock = product.variants.length > 0
+        ? product.variants.reduce((sum, variant) => sum + variant.stock, 0)
+        : product.stock;
+
+      suggestions.push({
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        price: this.pricingService.resolve(product).price,
+        imageUrl: product.images[0]?.url ?? null,
+        inStock: totalStock > 0 || product.allowBackorder
+      });
+
+      if (suggestions.length >= 4) break;
+    }
+
+    if (this.suggestionsCache.size > 200) this.suggestionsCache.clear();
+    this.suggestionsCache.set(cacheKey, { value: suggestions, expiresAt: Date.now() + SUGGESTIONS_CACHE_MS });
+
+    return suggestions;
   }
 
   toCouponItems(cart: CartWithItems): CouponEvaluationItem[] {
@@ -284,9 +399,10 @@ export class CartService {
 
   private async createCart(customerId: string | null): Promise<CartWithItems> {
     const cart = await this.prisma.cart.create({
-      data: { customerId, sessionToken: randomBytes(24).toString("hex") }
+      data: { customerId, sessionToken: randomBytes(24).toString("hex") },
+      include: CART_INCLUDE
     });
-    return this.reload(cart.id);
+    return cart;
   }
 
   private async mergeGuestCart(sessionToken: string, targetCartId: string): Promise<void> {

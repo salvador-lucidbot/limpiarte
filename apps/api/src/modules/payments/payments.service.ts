@@ -3,12 +3,14 @@ import { PaymentStatus } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { PaymentIntentResult } from "./payment-gateway.interface";
 import { StripeGateway } from "./stripe.gateway";
+import { WompiGateway } from "./wompi.gateway";
 
 @Injectable()
 export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly stripeGateway: StripeGateway
+    private readonly stripeGateway: StripeGateway,
+    private readonly wompiGateway: WompiGateway
   ) {}
 
   async createPaymentForOrder(
@@ -17,7 +19,23 @@ export class PaymentsService {
     amount: number,
     customerEmail: string
   ): Promise<PaymentIntentResult> {
-    const currency = process.env.STRIPE_CURRENCY ?? "cop";
+    const currency = process.env.PAYMENT_CURRENCY ?? "COP";
+
+    if (this.wompiGateway.isUsable()) {
+      const intent = await this.wompiGateway.createIntent(orderId, orderNumber, amount, currency, customerEmail);
+      await this.prisma.payment.create({
+        data: {
+          orderId,
+          gateway: intent.gateway,
+          method: "simulado",
+          status: PaymentStatus.PENDING,
+          amount,
+          currency: currency.toUpperCase(),
+          externalId: intent.externalId
+        }
+      });
+      return intent;
+    }
 
     if (this.stripeGateway.isConfigured()) {
       const intent = await this.stripeGateway.createIntent(orderId, orderNumber, amount, currency, customerEmail);
@@ -50,6 +68,7 @@ export class PaymentsService {
       externalId: null,
       clientSecret: null,
       publicKey: null,
+      redirectUrl: null,
       requiresOnlinePayment: false
     };
   }

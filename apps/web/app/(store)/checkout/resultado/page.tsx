@@ -3,20 +3,44 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
-import { IconAlertTriangle, IconCheckCircle, IconClock } from "../../../../components/icons";
+import { IconAlertTriangle, IconCheckCircle, IconClock, IconUser } from "../../../../components/icons";
+import { useCustomerAuth } from "../../../../lib/auth/customer-auth-context";
+import { useCart } from "../../../../lib/cart/cart-context";
+
+function CreateAccountInvite(): React.ReactNode {
+  const { customer, ready } = useCustomerAuth();
+  if (!ready || customer) return null;
+
+  return (
+    <div className="mt-2 flex w-full max-w-md items-center gap-4 rounded-2xl border border-brand-200 bg-brand-50 p-5 text-left">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-brand-500">
+        <IconUser size={22} />
+      </span>
+      <div className="flex-1">
+        <p className="text-sm font-semibold text-navy-900">Guarda tus datos para la próxima</p>
+        <p className="text-xs text-slate-500">Crea tu cuenta y repite pedidos en segundos, con seguimiento de envíos.</p>
+      </div>
+      <Link href="/cuenta/registro" className="shrink-0 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600">
+        Crear cuenta
+      </Link>
+    </div>
+  );
+}
 
 function ResultContent(): React.ReactNode {
   const searchParams = useSearchParams();
   const orderNumber = searchParams.get("order");
-  const manualPayment = searchParams.get("estado") === "manual";
+  const estado = searchParams.get("estado");
+  const manualPayment = estado === "manual";
   const redirectStatus = searchParams.get("redirect_status");
 
-  const isSuccess = manualPayment || redirectStatus === "succeeded";
+  const isSuccess = manualPayment || estado === "aprobado" || redirectStatus === "succeeded";
   const isProcessing = redirectStatus === "processing";
+  const { clearCart } = useCart();
 
   useEffect(() => {
-    if (isSuccess || isProcessing) window.localStorage.removeItem("limpiarte_cart_token");
-  }, [isSuccess, isProcessing]);
+    if (isSuccess || isProcessing) clearCart();
+  }, [clearCart, isSuccess, isProcessing]);
 
   if (isSuccess) {
     return (
@@ -84,6 +108,7 @@ function ResultShell({
           Volver a la tienda
         </Link>
       </div>
+      {tone === "success" && <CreateAccountInvite />}
     </div>
   );
 }

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card, EmptyState, inputClass, Table } from "../../../../components/admin/ui";
+import { Button, Card, EmptyState, inputClass, Pagination, Table } from "../../../../components/admin/ui";
 import { useAdminGet } from "../../../../lib/admin/use-admin-api";
 import { Paginated } from "../../../../lib/api/types";
 import { formatDate } from "../../../../lib/format";
+import { Loader } from "../../../../components/loader";
 
 interface AuditRow {
   id: string;
@@ -19,8 +20,9 @@ interface AuditRow {
 export default function AuditPage(): React.ReactNode {
   const [entity, setEntity] = useState("");
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(40);
 
-  const query = new URLSearchParams({ page: String(page), perPage: "40" });
+  const query = new URLSearchParams({ page: String(page), perPage: String(perPage) });
   if (entity) query.set("entity", entity);
 
   const { data, loading } = useAdminGet<Paginated<AuditRow>>(`/admin/audit?${query.toString()}`);
@@ -49,7 +51,7 @@ export default function AuditPage(): React.ReactNode {
         </div>
 
         {loading ? (
-          <EmptyState message="Cargando…" />
+          <Loader />
         ) : !data || data.data.length === 0 ? (
           <EmptyState message="Sin registros" />
         ) : (
@@ -79,20 +81,15 @@ export default function AuditPage(): React.ReactNode {
                 </tr>
               ))}
             </Table>
-            <div className="mt-4 flex items-center justify-between text-sm text-stone-500">
-              <span>{data.meta.total} registros</span>
-              <div className="flex gap-2">
-                <Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                  ←
-                </Button>
-                <span className="px-2 py-2">
-                  {data.meta.page} / {data.meta.totalPages}
-                </span>
-                <Button variant="secondary" disabled={page >= data.meta.totalPages} onClick={() => setPage(page + 1)}>
-                  →
-                </Button>
-              </div>
-            </div>
+            <Pagination
+              meta={data.meta}
+              itemLabel="registros"
+              onPageChange={setPage}
+              onPerPageChange={(value) => {
+                setPerPage(value);
+                setPage(1);
+              }}
+            />
           </>
         )}
       </Card>

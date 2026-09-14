@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useCart } from "../../lib/cart/cart-context";
+import { flyToCart } from "../../lib/cart/fly-to-cart";
 import { IconCart, IconCheck } from "../icons";
 
 interface AddToCartButtonProps {
@@ -10,21 +11,38 @@ interface AddToCartButtonProps {
   quantity?: number;
   disabled?: boolean;
   compact?: boolean;
+  productName?: string;
+  productImageUrl?: string | null;
+  unitPrice?: number | null;
 }
 
-export function AddToCartButton({ productId, variantId = null, quantity = 1, disabled = false, compact = false }: AddToCartButtonProps): React.ReactNode {
-  const { addItem, loading } = useCart();
+export function AddToCartButton({
+  productId,
+  variantId = null,
+  quantity = 1,
+  disabled = false,
+  compact = false,
+  productName,
+  productImageUrl = null,
+  unitPrice = null
+}: AddToCartButtonProps): React.ReactNode {
+  const { addItem, announceAdded, bumpOptimisticCount } = useCart();
   const [feedback, setFeedback] = useState<"idle" | "added" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   async function handleClick(): Promise<void> {
-    setFeedback("idle");
     setErrorMessage(null);
+    setFeedback("added");
+    flyToCart(buttonRef.current);
+    bumpOptimisticCount(quantity);
+    if (productName) announceAdded({ name: productName, imageUrl: productImageUrl, quantity, unitPrice });
+
     try {
       await addItem(productId, variantId, quantity);
-      setFeedback("added");
-      setTimeout(() => setFeedback("idle"), 2000);
+      setTimeout(() => setFeedback("idle"), 1600);
     } catch (error) {
+      bumpOptimisticCount(-quantity);
       setFeedback("error");
       setErrorMessage(error instanceof Error ? error.message : "No se pudo agregar");
     }
@@ -33,9 +51,10 @@ export function AddToCartButton({ productId, variantId = null, quantity = 1, dis
   if (compact) {
     return (
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => void handleClick()}
-        disabled={disabled || loading}
+        disabled={disabled}
         aria-label="Agregar al carrito"
         title="Agregar al carrito"
         className={`flex h-9 w-9 items-center justify-center rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-40 ${
@@ -52,9 +71,10 @@ export function AddToCartButton({ productId, variantId = null, quantity = 1, dis
   return (
     <div className="space-y-2">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => void handleClick()}
-        disabled={disabled || loading}
+        disabled={disabled}
         className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-6 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {feedback === "added" ? <IconCheck size={20} /> : <IconCart size={20} />}

@@ -18,11 +18,17 @@ export interface ProductCard {
   compareAtPrice: number | null;
   onPromo: boolean;
   imageUrl: string | null;
+  secondImageUrl: string | null;
   brandName: string | null;
   categoryName: string | null;
   categorySlug: string | null;
   inStock: boolean;
+  lowStock: boolean;
   isFeatured: boolean;
+  isNew: boolean;
+  isBestSeller: boolean;
+  rating: number | null;
+  reviewCount: number;
   tags: string[];
 }
 
@@ -97,7 +103,10 @@ export interface ProductDetail {
   onPromo: boolean;
   stock: number;
   inStock: boolean;
+  lowStock: boolean;
   allowBackorder: boolean;
+  rating: number | null;
+  reviewCount: number;
   images: { url: string; alt: string | null }[];
   options: ProductOptionView[];
   variants: ProductVariantView[];
@@ -123,6 +132,15 @@ export interface CartItemView {
   allowBackorder: boolean;
 }
 
+export interface CartSuggestion {
+  id: string;
+  slug: string;
+  name: string;
+  price: number;
+  imageUrl: string | null;
+  inStock: boolean;
+}
+
 export interface CartView {
   id: string;
   sessionToken: string;
@@ -135,6 +153,8 @@ export interface CartView {
   coupon: { code: string; discount: number } | null;
   couponError: string | null;
   shipping: { available: boolean; rate: number; freeShipping: boolean } | null;
+  freeShippingThreshold: number | null;
+  suggestions: CartSuggestion[];
 }
 
 export interface BannerView {
@@ -185,8 +205,48 @@ export interface CheckoutResponse {
     externalId: string | null;
     clientSecret: string | null;
     publicKey: string | null;
+    redirectUrl: string | null;
     requiresOnlinePayment: boolean;
   };
+}
+
+export interface ReviewView {
+  id: string;
+  authorName: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  isVerifiedPurchase: boolean;
+  createdAt: string;
+}
+
+export interface ReviewsResponse extends Paginated<ReviewView> {
+  summary: {
+    average: number | null;
+    count: number;
+    distribution: { rating: number; count: number }[];
+  };
+}
+
+export interface QuestionView {
+  id: string;
+  authorName: string;
+  question: string;
+  answer: string | null;
+  answeredAt: string | null;
+  createdAt: string;
+}
+
+export interface SuggestResponse {
+  products: { id: string; slug: string; name: string; price: number; imageUrl: string | null; categoryName: string | null }[];
+  categories: { name: string; slug: string }[];
+}
+
+export interface WelcomePopupSettings {
+  enabled?: boolean;
+  title?: string;
+  subtitle?: string;
+  couponCode?: string;
 }
 
 export interface CustomerSession {

@@ -125,6 +125,8 @@ export class OrdersService {
           shippingPhone: dto.shippingPhone,
           shippingLine1: dto.shippingLine1,
           shippingLine2: dto.shippingLine2,
+          shippingLatitude: dto.shippingLatitude,
+          shippingLongitude: dto.shippingLongitude,
           shippingCity: dto.shippingCity,
           shippingState: dto.shippingState,
           shippingPostalCode: dto.shippingPostalCode,
@@ -174,6 +176,12 @@ export class OrdersService {
     const payment = await this.prisma.payment.findFirst({ where: { externalId }, include: { order: { include: { items: true } } } });
     if (!payment) return;
     if (payment.status === PaymentStatus.APPROVED) return;
+
+    if (!ALLOWED_TRANSITIONS[payment.order.status].includes(OrderStatus.PAYMENT_CONFIRMED)) {
+      throw new BadRequestException(
+        `El pedido ${payment.order.orderNumber} ya no admite confirmación de pago (${STATUS_LABELS[payment.order.status]})`
+      );
+    }
 
     await this.prisma.payment.update({
       where: { id: payment.id },

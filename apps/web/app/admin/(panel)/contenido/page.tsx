@@ -1,12 +1,20 @@
 ﻿"use client";
 
 import { useState } from "react";
+import { ImageUrlField } from "../../../../components/admin/image-upload";
 import { slugify } from "../../../../components/admin/product-form";
 import { Badge, Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
-import { IconFileText, IconImage, IconMenu, IconPause, IconPencil, IconPlay, IconTrash } from "../../../../components/icons";
+import { IconFileText, IconImage, IconMail, IconMenu, IconPause, IconPencil, IconPlay, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 
-type Tab = "banners" | "paginas" | "blog" | "menu";
+type Tab = "banners" | "paginas" | "blog" | "menu" | "suscriptores";
+
+interface SubscriberRow {
+  id: string;
+  email: string;
+  source: string | null;
+  createdAt: string;
+}
 
 interface BannerRow {
   id: string;
@@ -60,7 +68,8 @@ export default function ContentAdminPage(): React.ReactNode {
             ["banners", "Banners", IconImage],
             ["paginas", "Páginas", IconFileText],
             ["blog", "Blog", IconPencil],
-            ["menu", "Menú", IconMenu]
+            ["menu", "Menú", IconMenu],
+            ["suscriptores", "Suscriptores", IconMail]
           ] as [Tab, string, (props: { size?: number }) => React.ReactNode][]
         ).map(([key, label, TabIcon]) => (
           <button
@@ -79,7 +88,30 @@ export default function ContentAdminPage(): React.ReactNode {
       {tab === "paginas" && <PagesTab />}
       {tab === "blog" && <BlogTab />}
       {tab === "menu" && <MenuTab />}
+      {tab === "suscriptores" && <SubscribersTab />}
     </div>
+  );
+}
+
+function SubscribersTab(): React.ReactNode {
+  const { data } = useAdminGet<{ total: number; subscribers: SubscriberRow[] }>("/admin/marketing/newsletter");
+
+  return (
+    <Card title={`Suscriptores del boletín${data ? ` (${data.total})` : ""}`}>
+      {!data || data.subscribers.length === 0 ? (
+        <EmptyState message="Aún no hay suscriptores. El popup de bienvenida los captura automáticamente." />
+      ) : (
+        <Table headers={["Correo", "Origen", "Fecha"]}>
+          {data.subscribers.map((subscriber) => (
+            <tr key={subscriber.id} className="border-b border-stone-50">
+              <td className="px-3 py-2 font-medium text-navy-900">{subscriber.email}</td>
+              <td className="px-3 py-2 text-stone-500">{subscriber.source ?? "—"}</td>
+              <td className="px-3 py-2 text-stone-500">{new Date(subscriber.createdAt).toLocaleDateString("es-CO")}</td>
+            </tr>
+          ))}
+        </Table>
+      )}
+    </Card>
   );
 }
 
@@ -145,9 +177,13 @@ function BannersTab(): React.ReactNode {
           <Field label="Subtítulo">
             <input value={form.subtitle} onChange={(event) => setForm({ ...form, subtitle: event.target.value })} className={inputClass} />
           </Field>
-          <Field label="Imagen (URL) *">
-            <input required value={form.imageUrl} onChange={(event) => setForm({ ...form, imageUrl: event.target.value })} className={inputClass} />
-          </Field>
+          <ImageUrlField
+            label="Imagen"
+            required
+            value={form.imageUrl}
+            onChange={(url) => setForm({ ...form, imageUrl: url })}
+            hint="Hero: 2400×1000 px. Promoción: 1600×640 px. JPG, PNG, WebP o AVIF hasta 5 MB."
+          />
           <Field label="Enlace">
             <input value={form.linkUrl} onChange={(event) => setForm({ ...form, linkUrl: event.target.value })} className={inputClass} />
           </Field>
@@ -317,9 +353,12 @@ function BlogTab(): React.ReactNode {
           <Field label="Extracto">
             <input value={form.excerpt} onChange={(event) => setForm({ ...form, excerpt: event.target.value })} className={inputClass} />
           </Field>
-          <Field label="Imagen de portada (URL)">
-            <input value={form.coverImageUrl} onChange={(event) => setForm({ ...form, coverImageUrl: event.target.value })} className={inputClass} />
-          </Field>
+          <ImageUrlField
+            label="Imagen de portada"
+            value={form.coverImageUrl}
+            onChange={(url) => setForm({ ...form, coverImageUrl: url })}
+            hint="1200×675 px (16:9)."
+          />
           <Field label="Contenido (HTML) *">
             <textarea required rows={8} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} className={`${inputClass} font-mono text-xs`} />
           </Field>

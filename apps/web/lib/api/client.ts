@@ -17,14 +17,15 @@ interface ApiFetchOptions {
 }
 
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
   const headers: Record<string, string> = {};
-  if (options.body !== undefined) headers["content-type"] = "application/json";
+  if (options.body !== undefined && !isFormData) headers["content-type"] = "application/json";
   if (options.token) headers.authorization = `Bearer ${options.token}`;
 
   const response = await fetch(`${API_URL}${path}`, {
     method: options.method ?? "GET",
     headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body: options.body === undefined ? undefined : isFormData ? (options.body as FormData) : JSON.stringify(options.body),
     next: options.revalidate === undefined ? { revalidate: 60 } : options.revalidate === false ? undefined : { revalidate: options.revalidate },
     cache: options.revalidate === false ? "no-store" : undefined
   });

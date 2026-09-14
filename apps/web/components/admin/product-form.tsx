@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { IconX } from "../icons";
+import { ImageUploadButton } from "./image-upload";
 import { Button, Card, Field, inputClass } from "./ui";
 
 export interface ProductFormOption {
@@ -271,7 +272,7 @@ export function ProductForm({ value, onChange, categories, brands, onSubmit, sub
         </div>
       </Card>
 
-      <Card title="Imágenes (URLs)">
+      <Card title="Imágenes">
         <div className="space-y-2">
           {value.images.map((url, index) => (
             <div key={`${url}-${index}`} className="flex items-center gap-2">
@@ -285,7 +286,7 @@ export function ProductForm({ value, onChange, categories, brands, onSubmit, sub
             </div>
           ))}
           <div className="flex gap-2">
-            <input placeholder="https://…" value={newImage} onChange={(event) => setNewImage(event.target.value)} className={inputClass} />
+            <input placeholder="Pega una URL o sube archivos" value={newImage} onChange={(event) => setNewImage(event.target.value)} className={inputClass} />
             <Button
               type="button"
               variant="secondary"
@@ -297,7 +298,15 @@ export function ProductForm({ value, onChange, categories, brands, onSubmit, sub
             >
               Agregar
             </Button>
+            <ImageUploadButton
+              multiple
+              label="Subir imágenes"
+              onUploaded={(urls) => onChange({ ...value, images: [...value.images, ...urls] })}
+            />
           </div>
+          <p className="text-xs text-stone-400">
+            La primera imagen es la principal de la tarjeta; la segunda se muestra al pasar el mouse. JPG, PNG, WebP o AVIF hasta 5 MB.
+          </p>
         </div>
       </Card>
 
