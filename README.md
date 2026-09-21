@@ -181,5 +181,5 @@ Recomendadas: `SMTP_*` y `MAIL_FROM_*` (sin SMTP no salen correos ni el código 
 **Tres cosas que hay que tener presentes al pasar a producción:**
 
 1. **Pasarela de pago.** `WompiGateway` opera solo simulado y en producción se desactiva sola, así que el checkout cae al flujo manual (transferencia) hasta que se implemente Wompi real o se configure `PAYMENT_GATEWAY=stripe`. Activar la simulación en producción exige poner `WOMPI_SIMULATION=true` de forma explícita.
-2. **Imágenes subidas.** Viven en el disco (`apps/api/uploads/`), no en un CDN. Si el hosting recicla el contenedor o escala a varias instancias, hay que montar `UPLOADS_DIR` en un volumen persistente compartido o se pierden.
+2. **Imágenes subidas.** Viven en el disco (`apps/api/uploads/`), no en un CDN, y esa carpeta **sí se versiona**, así que las imágenes actuales llegan a producción con el despliegue. Ojo: las URLs se guardan absolutas, por lo que hay que definir `PUBLIC_BASE_URL` y actualizar las URLs ya guardadas para que apunten al dominio real. Si el hosting recicla el contenedor o escala a varias instancias, montar `UPLOADS_DIR` en un volumen persistente compartido.
 3. **Acceso remoto a MySQL.** Para trabajar en local hay que autorizar la IP pública en *MySQL remoto* del panel de Hostinger. En producción no aplica, porque la API y la base conviven en el mismo servidor.
