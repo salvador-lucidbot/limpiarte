@@ -159,7 +159,11 @@ pnpm db:generate      # el cliente Prisma NO está en el repo: sin esto el build
 pnpm build            # compila API (dist/) y web (.next/)
 ```
 
-**Arranque**: `pnpm start:api` para la API y `pnpm start:web` para el storefront.
+**Arranque**: `pnpm start:api` para la API y `pnpm start:web` para el storefront. Ambos respetan la variable `PORT` que inyecta el hosting (`next start` sin `-p` la toma automáticamente; forzar `-p 3000` deja la app inalcanzable).
+
+> **`NEXT_PUBLIC_API_URL` se resuelve en tiempo de build, no de ejecución.** Next.js reemplaza las variables `NEXT_PUBLIC_*` dentro del bundle durante `next build`, así que definirla solo como variable de entorno del proceso no sirve: tiene que estar presente cuando corre el build, o el navegador seguirá apuntando a `http://localhost:4000/api/v1`.
+
+> **El monorepo tiene dos aplicaciones.** El hosting de Node.js sirve un proceso por sitio, así que la API y el storefront necesitan sitios (o subdominios) separados: por ejemplo `api.dominio.com` ejecutando `pnpm start:api` y `dominio.com` ejecutando `pnpm start:web`, con `CORS_ORIGINS` y `NEXT_PUBLIC_API_URL` apuntando el uno al otro.
 
 > **No usar `pnpm db:deploy`**: el proyecto no tiene carpeta `prisma/migrations` porque el hosting compartido no permite la shadow database que exige `migrate dev`. Los cambios de schema se aplican con `prisma db push` desde una máquina con acceso remoto a la base, nunca en el paso de build.
 
