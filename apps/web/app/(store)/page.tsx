@@ -274,16 +274,16 @@ export default async function HomePage(): Promise<React.ReactNode> {
       </section>
 
       {stats.length > 0 && (
-        <section className="hidden bg-navy-900 py-14 md:block">
+        <section className="hidden bg-navy-900 py-8 md:block">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 gap-y-10 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-y-6 lg:grid-cols-4">
               {stats.slice(0, 4).map((stat, index, shown) => (
                 <div
                   key={stat.id}
                   className={`px-4 text-center ${index < shown.length - 1 ? "lg:border-r lg:border-white/10" : ""}`}
                 >
-                  <p className="text-5xl font-extrabold leading-none tracking-tight text-accent lg:text-6xl">{stat.display}</p>
-                  <p className="mt-3 text-sm font-medium text-white/70">{stat.label}</p>
+                  <p className="text-4xl font-extrabold leading-none tracking-tight text-accent lg:text-5xl">{stat.display}</p>
+                  <p className="mt-2 text-sm font-medium text-white/70">{stat.label}</p>
                 </div>
               ))}
             </div>

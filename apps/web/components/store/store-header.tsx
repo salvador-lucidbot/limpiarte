@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { CategoryNode } from "../../lib/api/types";
 import { useCustomerAuth } from "../../lib/auth/customer-auth-context";
 import { useCart } from "../../lib/cart/cart-context";
 import { formatCOP } from "../../lib/format";
 import { useWishlist } from "../../lib/wishlist/wishlist-context";
-import { IconCart, IconCheck, IconChevronDown, IconExternalLink, IconHeart, IconMenu, IconTruck, IconUser, IconX } from "../icons";
+import { IconCart, IconCheck, IconChevronDown, IconExternalLink, IconHeart, IconLogOut, IconMenu, IconTruck, IconX } from "../icons";
 import { Logo } from "../logo";
+import { CustomerMenu } from "./customer-menu";
 import { SearchAutocomplete } from "./search-autocomplete";
 
 interface StoreHeaderProps {
@@ -38,7 +40,8 @@ function AnnouncementBar({ announcements }: { announcements: string[] }): React.
 
 export function StoreHeader({ categories, storeName, announcements }: StoreHeaderProps): React.ReactNode {
   const { openDrawer, itemCount, lastAdded } = useCart();
-  const { customer } = useCustomerAuth();
+  const { customer, logout } = useCustomerAuth();
+  const router = useRouter();
   const { count: wishlistCount } = useWishlist();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
@@ -46,7 +49,6 @@ export function StoreHeader({ categories, storeName, announcements }: StoreHeade
   const [cartGlow, setCartGlow] = useState(false);
   const [showAdded, setShowAdded] = useState(false);
   const cartButtonRef = useRef<HTMLButtonElement | null>(null);
-
 
   useEffect(() => {
     if (itemCount === 0) return;
@@ -109,13 +111,7 @@ export function StoreHeader({ categories, storeName, announcements }: StoreHeade
           </div>
 
           <nav className="ml-auto flex shrink-0 items-center gap-1 md:ml-0">
-            <Link
-              href={customer ? "/cuenta" : "/cuenta/login"}
-              className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 sm:flex"
-            >
-              <IconUser size={20} className="text-slate-500" />
-              <span className="hidden lg:inline">{customer ? customer.firstName : "Mi cuenta"}</span>
-            </Link>
+            <CustomerMenu />
             <Link
               href="/favoritos"
               className="relative hidden items-center rounded-lg px-3 py-2 text-slate-700 transition hover:bg-slate-100 sm:flex"
@@ -269,9 +265,35 @@ export function StoreHeader({ categories, storeName, announcements }: StoreHeade
             <Link href="/servicios" className="border-b border-slate-100 py-2.5" onClick={() => setMobileOpen(false)}>
               Servicios de aseo
             </Link>
-            <Link href={customer ? "/cuenta" : "/cuenta/login"} className="py-2.5" onClick={() => setMobileOpen(false)}>
-              {customer ? "Mi cuenta" : "Ingresar / Registrarme"}
-            </Link>
+            {customer ? (
+              <>
+                <Link href="/cuenta" className="border-b border-slate-100 py-2.5" onClick={() => setMobileOpen(false)}>
+                  Mi cuenta
+                </Link>
+                <Link href="/cuenta/pedidos" className="border-b border-slate-100 py-2.5" onClick={() => setMobileOpen(false)}>
+                  Mis pedidos
+                </Link>
+                <Link href="/cuenta/direcciones" className="border-b border-slate-100 py-2.5" onClick={() => setMobileOpen(false)}>
+                  Mis direcciones
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    logout();
+                    router.push("/");
+                  }}
+                  className="flex items-center gap-2 py-2.5 text-left font-medium text-red-600"
+                >
+                  <IconLogOut size={17} />
+                  Cerrar sesión
+                </button>
+              </>
+            ) : (
+              <Link href="/cuenta/login" className="py-2.5" onClick={() => setMobileOpen(false)}>
+                Ingresar / Registrarme
+              </Link>
+            )}
           </div>
         </nav>
       )}

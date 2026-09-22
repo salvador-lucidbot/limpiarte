@@ -181,14 +181,14 @@ export function SearchAutocomplete({
 
   const shell =
     variant === "hero"
-      ? "flex flex-col items-center rounded-2xl border border-white/20 bg-white/95 p-2 shadow-2xl backdrop-blur md:flex-row"
+      ? "flex flex-col items-center rounded-2xl border border-white/20 bg-white/95 p-1.5 shadow-2xl backdrop-blur md:flex-row"
       : variant === "catalog"
         ? "flex items-center rounded-2xl border border-line/60 bg-soft px-4 py-1 transition-all focus-within:border-primary focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/25"
         : "flex items-center gap-2 rounded-xl border border-line/70 bg-soft px-3 py-2 transition focus-within:border-primary focus-within:bg-white";
 
   const field =
     variant === "hero"
-      ? "w-full border-none bg-transparent py-4 text-base font-medium text-ink outline-none placeholder:text-slate-400"
+      ? "w-full border-none bg-transparent py-2.5 text-base font-medium text-ink outline-none placeholder:text-slate-400"
       : variant === "catalog"
         ? "w-full bg-transparent py-3 text-sm text-ink outline-none placeholder:text-slate-400"
         : "w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-slate-400";
@@ -254,7 +254,10 @@ export function SearchAutocomplete({
         )}
 
         {variant === "hero" && (
-          <button type="submit" className="btn-primary w-full rounded-xl px-8 py-4 md:m-1 md:w-auto">
+          <button
+            type="submit"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-8 py-3 font-bold text-white shadow-primary-sm transition hover:bg-primary-dark hover:shadow-primary md:m-1 md:w-auto"
+          >
             <IconSearch size={18} />
             Buscar
           </button>

@@ -5,10 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { IconAlertTriangle, IconCheckCircle } from "../../../../components/icons";
 import { apiFetch } from "../../../../lib/api/client";
+import { useCustomerAuth } from "../../../../lib/auth/customer-auth-context";
 
 function VerifyContent(): React.ReactNode {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const { refresh } = useCustomerAuth();
   const [status, setStatus] = useState<"pending" | "ok" | "error">("pending");
 
   useEffect(() => {
@@ -17,9 +19,14 @@ function VerifyContent(): React.ReactNode {
       return;
     }
     apiFetch("/auth/customer/verify-email", { method: "POST", body: { token }, revalidate: false })
-      .then(() => setStatus("ok"))
+      .then(async () => {
+        // La sesión guardada trae el estado del registro, así que hay que releerla
+        // o /cuenta seguiría avisando de que el correo no está verificado.
+        await refresh();
+        setStatus("ok");
+      })
       .catch(() => setStatus("error"));
-  }, [token]);
+  }, [refresh, token]);
 
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-24 text-center">

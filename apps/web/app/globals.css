@@ -13,8 +13,22 @@
   --color-brand-900: #14506d;
   --color-navy-800: #16405c;
   --color-navy-900: #0e2f46;
+
+  /* Roles de la dirección de arte. La escala brand-* sigue siendo la fuente de verdad;
+     estos alias son los que usa la portada, para no repetir el mismo hex en el marcado. */
+  --color-primary: #29abe2;
+  --color-primary-dark: #1690c8;
+  --color-accent: #7fd8f7;
+  --color-contrast: #0e2f46;
+  --color-ink: #16303f;
   --color-surface: #f2f5f7;
+  --color-line: #dde6ec;
+  --color-soft: #eef3f7;
+
   --font-sans: var(--font-manrope), "Segoe UI", "Helvetica Neue", system-ui, -apple-system, sans-serif;
+
+  --shadow-primary: 0 10px 28px rgba(41, 171, 226, 0.34);
+  --shadow-primary-sm: 0 4px 14px rgba(41, 171, 226, 0.28);
 }
 
 body {

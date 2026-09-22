@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { randomUUID } from "crypto";
-import { mkdir, unlink, writeFile } from "fs/promises";
+import { copyFile, mkdir, readdir, stat, unlink, writeFile } from "fs/promises";
 import { isAbsolute, join, resolve } from "path";
 
 export interface UploadedImageFile {
@@ -36,6 +36,16 @@ export function resolveUploadsDirectory(): string {
   return resolve(process.cwd(), "uploads");
 }
 
+/**
+ * Imágenes que viajan compiladas dentro del artefacto de despliegue.
+ * El build de Hostinger corre en un entorno efímero y solo promueve el directorio de salida,
+ * así que los archivos del repositorio llegan aquí y hay que copiarlos al almacenamiento
+ * persistente cuando arranca el proceso, que es lo único que ve el disco definitivo.
+ */
+function resolveSeedDirectory(): string {
+  return resolve(__dirname, "..", "..", "uploads-seed");
+}
+
 function matchesMagicBytes(buffer: Buffer, mimeType: string): boolean {
   if (mimeType === "image/jpeg") return buffer.length > 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
   if (mimeType === "image/png") {
@@ -58,6 +68,42 @@ export class UploadStorageService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     await mkdir(this.directory, { recursive: true });
     this.logger.log(`Almacenamiento de imágenes en ${this.directory}`);
+    await this.seedBundledImages();
+  }
+
+  private async seedBundledImages(): Promise<void> {
+    const seedDirectory = resolveSeedDirectory();
+    if (seedDirectory === this.directory) return;
+
+    let names: string[];
+    try {
+      names = await readdir(seedDirectory);
+    } catch {
+      return;
+    }
+
+    let copied = 0;
+
+    for (const name of names) {
+      if (!SAFE_FILE_NAME.test(name)) continue;
+
+      const target = join(this.directory, name);
+      try {
+        await stat(target);
+        continue;
+      } catch {
+        void 0;
+      }
+
+      try {
+        await copyFile(join(seedDirectory, name), target);
+        copied += 1;
+      } catch (error) {
+        this.logger.warn(`No se pudo sembrar la imagen ${name}: ${(error as Error).message}`);
+      }
+    }
+
+    if (copied > 0) this.logger.log(`Imágenes sembradas desde el artefacto: ${copied}`);
   }
 
   async saveImage(file: UploadedImageFile, requestBaseUrl: string): Promise<StoredImage> {
