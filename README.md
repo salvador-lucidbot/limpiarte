@@ -187,3 +187,37 @@ Recomendadas: `SMTP_*` y `MAIL_FROM_*` (sin SMTP no salen correos ni el código 
 1. **Pasarela de pago.** `WompiGateway` opera solo simulado y en producción se desactiva sola, así que el checkout cae al flujo manual (transferencia) hasta que se implemente Wompi real o se configure `PAYMENT_GATEWAY=stripe`. Activar la simulación en producción exige poner `WOMPI_SIMULATION=true` de forma explícita.
 2. **Imágenes subidas.** Viven en el disco (`apps/api/uploads/`), no en un CDN, y esa carpeta **sí se versiona**, así que las imágenes actuales llegan a producción con el despliegue. Ojo: las URLs se guardan absolutas, por lo que hay que definir `PUBLIC_BASE_URL` y actualizar las URLs ya guardadas para que apunten al dominio real. Si el hosting recicla el contenedor o escala a varias instancias, montar `UPLOADS_DIR` en un volumen persistente compartido.
 3. **Acceso remoto a MySQL.** Para trabajar en local hay que autorizar la IP pública en *MySQL remoto* del panel de Hostinger. En producción no aplica, porque la API y la base conviven en el mismo servidor.
+
+#### Infraestructura aprovisionada
+
+El plan vive en la cuenta propia de Limpiarte (Cloud Startup, pedido `1009813383`), aprovisionada en el datacenter **`netriplex` (EEUU, Carolina del Norte)** — la mejor latencia real hacia Colombia, cuyo tráfico sale vía Miami. El datacenter queda fijo para todos los sitios del plan.
+
+| | Storefront | API |
+|---|---|---|
+| Dominio | `limpiarte.shop` | `api.limpiarte.shop` |
+| Archivo que se sube | contenido de `apps/web` | contenido de `apps/api` **ya compilado** |
+| `root_directory` | `.` | `.` |
+| `app_type` | `next` | `nest` |
+| `package_manager` | `npm` | `npm` |
+| `build_script` | `build` | `build:prebuilt` (no compila) |
+| `output_directory` | `.next` | `dist` |
+| `entry_file` | — | `main.js` |
+| Node | 20 | 22 |
+
+**El despliegue NO usa pnpm ni el monorepo.** Se sube un archivo por app, con la app en la raíz del archivo, y se instala con npm. Las apps lo permiten porque son autocontenidas: no hay `packages/`, ni dependencias `workspace:`, ni imports cruzados, y ningún `tsconfig` extiende el de la raíz. El repo sigue siendo un monorepo pnpm para desarrollo; sólo cambia el empaquetado del despliegue.
+
+Cinco cosas que se aprendieron a base de builds fallidos y que hay que respetar:
+
+1. **pnpm no funciona en la imagen de build de Hostinger.** Su envoltorio pide `pnpm@latest` a corepack y esa descarga nunca llega: el build muere con `Cannot find module '.../corepack/v1/pnpm/12.5.1/bin/pnpm.cjs'`. No es caché corrupta —falla igual con un `COREPACK_HOME` nuevo y vacío— ni se corrige con `COREPACK_DEFAULT_TO_LATEST=0`, porque la versión se pide explícitamente. De ahí el cambio a npm.
+2. **`nest build` muere por memoria en el contenedor.** El proceso se corta sin emitir nada justo después de `prisma generate`, porque `tsc` sobre el cliente Prisma 7 recién generado es muy pesado. Subir `--max-old-space-size` lo **empeora**: V8 crece hasta que el kernel lo mata. La solución es compilar en local y subir `dist/` dentro del artefacto, con `build:prebuilt` como script de build.
+3. **`entry_file` es relativo a `output_directory`, no a la raíz.** Con `output_directory: dist` el valor correcto es `main.js`; poner `dist/main.js` hace que busque `dist/dist/main.js` y el build falla **después** de que el script de build haya terminado bien, lo que despista mucho.
+4. **`NODE_ENV=production` hace que npm omita las `devDependencies`.** Si se compila en el servidor hay que añadir `NPM_CONFIG_INCLUDE=dev`, o falta el binario `nest` (`nest: command not found`). El storefront sí compila en el servidor y lo necesita; la API no, porque llega compilada.
+5. **`hosting_deployJsApplication` autodetecta y descarta los ajustes guardados.** Sube el archivo y arranca un build con sus propios valores (leyó el `package.json` de la raíz del monorepo y eligió `app_type: other`). Hay que dejar que suba el archivo y luego lanzar el build explícito con `Start Node.js build` apuntando al mismo `archive_path`. Y no se pueden solapar dos builds del mismo sitio: el segundo falla.
+
+Lockfiles: no hay `package-lock.json` en el repo. Se generan en una copia temporal de cada app con `npm install --package-lock-only` y viajan dentro del archivo, para que el build del servidor no re-resuelva los rangos `^` en cada despliegue.
+
+Base de datos `u568218528_limpiarte`, usuario `u568218528_limpiarte_app`. Desde la app se conecta a **`127.0.0.1:3306`**, nunca al host `srv402.hstgr.io`, que sirve solo para conexiones externas previa autorización de IP. Con Node hay que usar la IP y no `localhost`, porque puede resolver a `::1` y el usuario de la base no tiene ese permiso.
+
+**Anidamiento de vhosts.** Hostinger ancla los subdominios bajo el `public_html` del dominio padre, así que la raíz de la API queda en `public_html/api_app`, dentro de la del storefront. Se comprobó que un despliegue completo del storefront **no** borra `api_app`: la API siguió respondiendo 200 inmediatamente después. Aun así conviene verificarla tras cada despliegue del storefront, porque la documentación de la API advierte que el build sobrescribe el contenido del sitio y ese comportamiento podría cambiar.
+
+> **Sin SMTP no se puede entrar al panel en producción.** El login de staff exige un código de 6 dígitos por correo, y `auth.service.ts` solo lo escribe en el log cuando `NODE_ENV !== "production"`. Con `NODE_ENV=production` y sin `SMTP_HOST` el código no llega a ninguna parte y `/admin` queda inaccesible. Hay que crear un buzón en el dominio y definir `SMTP_*` y `MAIL_FROM_*` **antes** de sembrar la base.

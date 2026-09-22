@@ -237,9 +237,31 @@ export interface QuestionView {
   createdAt: string;
 }
 
-export interface SuggestResponse {
-  products: { id: string; slug: string; name: string; price: number; imageUrl: string | null; categoryName: string | null }[];
+export interface SuggestProduct {
+  slug: string;
+  name: string;
+  price: number;
+  compareAtPrice: number | null;
+  imageUrl: string | null;
+  categoryName: string | null;
+  brandName: string | null;
+}
+
+export interface SearchSuggestions {
+  query: string;
+  products: SuggestProduct[];
   categories: { name: string; slug: string }[];
+  brands: { name: string; slug: string }[];
+}
+
+export interface StorefrontStats {
+  products: number;
+  categories: number;
+  brands: number;
+  unitsInStock: number;
+  ordersDelivered: number;
+  customers: number;
+  cities: number;
 }
 
 export interface WelcomePopupSettings {

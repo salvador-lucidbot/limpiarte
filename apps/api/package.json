@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "build": "nest build",
+    "build:deploy": "prisma generate && nest build",
+    "build:prebuilt": "echo 'dist/ viene compilado en el artefacto: no se compila en el servidor'",
     "dev": "nest start --watch",
     "start": "nest start",
     "start:prod": "node dist/main.js",

@@ -105,7 +105,7 @@ export function StoreHeader({ categories, storeName, announcements }: StoreHeade
           </Link>
 
           <div className="hidden flex-1 md:block">
-            <SearchAutocomplete />
+            <SearchAutocomplete variant="header" />
           </div>
 
           <nav className="ml-auto flex shrink-0 items-center gap-1 md:ml-0">
@@ -240,7 +240,11 @@ export function StoreHeader({ categories, storeName, announcements }: StoreHeade
       </nav>
 
       <div className="border-b border-slate-200 bg-white px-4 pb-3 md:hidden">
-        <SearchAutocomplete compact />
+        <SearchAutocomplete
+          variant="header"
+          placeholder="Busca desinfectantes, detergentes…"
+          onNavigate={() => setMobileOpen(false)}
+        />
       </div>
 
       {mobileOpen && (

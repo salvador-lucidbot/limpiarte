@@ -20,6 +20,11 @@ export class StorefrontCatalogController {
     return this.catalogService.suggest(term ?? "");
   }
 
+  @Get("stats")
+  stats(): ReturnType<StorefrontCatalogService["stats"]> {
+    return this.catalogService.stats();
+  }
+
   @Get("brands")
   brands(): Promise<Brand[]> {
     return this.prisma.brand.findMany({

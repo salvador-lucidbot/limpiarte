@@ -35,6 +35,14 @@ const EXPERIENCE_FIELDS: { key: string; label: string }[] = [
   { key: "shipping.leadTimeMaxDays", label: "Entrega estimada: máximo de días hábiles" }
 ];
 
+const HOME_STATS_FIELDS: { key: string; label: string }[] = [
+  { key: "home.stats.products", label: "Productos en catálogo" },
+  { key: "home.stats.customers", label: "Usuarios registrados" },
+  { key: "home.stats.shipments", label: "Envíos realizados" },
+  { key: "home.stats.cities", label: "Ciudades con cobertura" },
+  { key: "home.stats.units", label: "Unidades disponibles" }
+];
+
 const TRACKING_FIELDS: { key: string; label: string }[] = [
   { key: "tracking.ga4Id", label: "Google Analytics 4 (ID de medición)" },
   { key: "tracking.gtmId", label: "Google Tag Manager (ID de contenedor)" },
@@ -203,6 +211,29 @@ export default function SettingsAdminPage(): React.ReactNode {
         </div>
         <div className="mt-4">
           <Button onClick={() => void saveExperience()}>Guardar experiencia de compra</Button>
+        </div>
+      </Card>
+
+      <Card title="Cifras de la portada">
+        <p className="mb-4 text-sm text-slate-500">
+          Texto que se muestra en la franja de cifras de la página principal. Admite cualquier formato, por ejemplo{" "}
+          <span className="font-semibold text-navy-900">1071+</span>. Si dejas un campo vacío se usa el número real del
+          catálogo, y si ese número es cero la cifra no se muestra. Se pintan las primeras cuatro con valor.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {HOME_STATS_FIELDS.map((field) => (
+            <Field key={field.key} label={field.label}>
+              <input
+                value={values[field.key] ?? ""}
+                onChange={(event) => setValues({ ...values, [field.key]: event.target.value })}
+                placeholder="Automático"
+                className={inputClass}
+              />
+            </Field>
+          ))}
+        </div>
+        <div className="mt-4">
+          <Button onClick={() => void saveGroup(HOME_STATS_FIELDS, "home")}>Guardar cifras de la portada</Button>
         </div>
       </Card>
 
