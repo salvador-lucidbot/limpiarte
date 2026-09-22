@@ -41,18 +41,25 @@ type CartWithItems = Prisma.CartGetPayload<{
     coupon: true;
     items: {
       include: {
-        product: { include: { images: true; category: true } };
+        product: { include: { images: true } };
         variant: { include: { optionValues: { include: { optionValue: true } } } };
       };
     };
   };
 }>;
 
+interface CartRef {
+  id: string;
+  lucidNotifiedAt: Date | null;
+  /** Recién creado en esta petición: no puede tener ítems todavía. */
+  isNew: boolean;
+}
+
 const CART_INCLUDE = {
   coupon: true,
   items: {
     include: {
-      product: { include: { images: { orderBy: { position: "asc" }, take: 1 }, category: true } },
+      product: { include: { images: { orderBy: { position: "asc" }, take: 1 } } },
       variant: { include: { optionValues: { include: { optionValue: true } } } }
     },
     orderBy: { createdAt: "asc" }
@@ -75,8 +82,12 @@ export class CartService {
         include: CART_INCLUDE
       });
       if (customerCart) {
-        if (sessionToken && customerCart.sessionToken !== sessionToken) await this.mergeGuestCart(sessionToken, customerCart.id);
-        return this.reload(customerCart.id);
+        // Solo vale la pena recargar si la fusión con el carrito de invitado cambió los ítems.
+        if (sessionToken && customerCart.sessionToken !== sessionToken) {
+          await this.mergeGuestCart(sessionToken, customerCart.id);
+          return this.reload(customerCart.id);
+        }
+        return customerCart;
       }
 
       if (sessionToken) {
@@ -101,8 +112,9 @@ export class CartService {
       if (cart) {
         if (cart.status === CartStatus.ABANDONED) {
           await this.prisma.cart.update({ where: { id: cart.id }, data: { status: CartStatus.ACTIVE, abandonedAt: null } });
+          return this.reload(cart.id);
         }
-        return this.reload(cart.id);
+        return cart;
       }
     }
 
@@ -110,38 +122,36 @@ export class CartService {
   }
 
   async addItem(sessionToken: string, customerId: string | null, productId: string, variantId: string | null, quantity: number): Promise<CartView> {
-    const cart = await this.getOrCreate(sessionToken, customerId);
-
-    const product = await this.prisma.product.findFirst({
-      where: { id: productId, deletedAt: null, status: ProductStatus.ACTIVE },
-      include: { variants: true }
-    });
+    const [cartRef, product] = await Promise.all([
+      this.resolveCartRef(sessionToken, customerId),
+      this.prisma.product.findFirst({
+        where: { id: productId, deletedAt: null, status: ProductStatus.ACTIVE },
+        include: { variants: true }
+      })
+    ]);
     if (!product) throw new BadRequestException("Producto no disponible");
 
     const variant = variantId ? product.variants.find((candidate) => candidate.id === variantId && candidate.isActive) : null;
     if (variantId && !variant) throw new BadRequestException("Variante no disponible");
     if (product.variants.length > 0 && !variantId) throw new BadRequestException("Selecciona una presentación");
 
-    const existing = await this.findItem(cart.id, productId, variantId);
+    const existing = cartRef.isNew ? null : await this.findItem(cartRef.id, productId, variantId);
     const newQuantity = (existing?.quantity ?? 0) + quantity;
 
     this.assertStock(product.allowBackorder, variant ? variant.stock : product.stock, newQuantity);
 
-    if (existing) {
-      await this.prisma.cartItem.update({ where: { id: existing.id }, data: { quantity: newQuantity } });
-    }
-    if (!existing) {
-      await this.prisma.cartItem.create({ data: { cartId: cart.id, productId, variantId, quantity } });
-    }
+    await Promise.all([
+      existing
+        ? this.prisma.cartItem.update({ where: { id: existing.id }, data: { quantity: newQuantity } })
+        : this.prisma.cartItem.create({ data: { cartId: cartRef.id, productId, variantId, quantity } }),
+      this.touch(cartRef)
+    ]);
 
-    await this.touch(cart.id);
-    return this.buildView(await this.reload(cart.id));
+    return this.buildView(await this.reload(cartRef.id));
   }
 
   async updateItem(sessionToken: string, itemId: string, quantity: number, variantId?: string): Promise<CartView> {
-    const cart = await this.requireCart(sessionToken);
-    const item = cart.items.find((candidate) => candidate.id === itemId);
-    if (!item) throw new NotFoundException("Ítem no encontrado");
+    const item = await this.findOwnedItem(sessionToken, itemId);
 
     const targetVariantId = variantId !== undefined ? variantId : item.variantId;
     const variant = targetVariantId
@@ -151,23 +161,19 @@ export class CartService {
 
     this.assertStock(item.product.allowBackorder, variant ? variant.stock : item.product.stock, quantity);
 
-    await this.prisma.cartItem.update({
-      where: { id: itemId },
-      data: { quantity, variantId: targetVariantId }
-    });
+    await Promise.all([
+      this.prisma.cartItem.update({ where: { id: itemId }, data: { quantity, variantId: targetVariantId } }),
+      this.touch(item.cart)
+    ]);
 
-    await this.touch(cart.id);
-    return this.buildView(await this.reload(cart.id));
+    return this.buildView(await this.reload(item.cart.id));
   }
 
   async removeItem(sessionToken: string, itemId: string): Promise<CartView> {
-    const cart = await this.requireCart(sessionToken);
-    const item = cart.items.find((candidate) => candidate.id === itemId);
-    if (!item) throw new NotFoundException("Ítem no encontrado");
+    const item = await this.findOwnedItem(sessionToken, itemId);
 
-    await this.prisma.cartItem.delete({ where: { id: itemId } });
-    await this.touch(cart.id);
-    return this.buildView(await this.reload(cart.id));
+    await Promise.all([this.prisma.cartItem.delete({ where: { id: itemId } }), this.touch(item.cart)]);
+    return this.buildView(await this.reload(item.cart.id));
   }
 
   async applyCoupon(sessionToken: string, code: string, customerId: string | null): Promise<CartView> {
@@ -282,11 +288,38 @@ export class CartService {
     });
   }
 
+  /**
+   * Referencia mínima al carrito activo del token. Evita traer todo el árbol de relaciones
+   * cuando solo se va a escribir un ítem; cae al camino completo si hay que crear o fusionar.
+   */
+  private async resolveCartRef(sessionToken: string, customerId: string | null): Promise<CartRef> {
+    if (!customerId) {
+      const cart = await this.prisma.cart.findFirst({
+        where: { sessionToken, status: { in: [CartStatus.ACTIVE, CartStatus.ABANDONED] } },
+        select: { id: true, status: true, lucidNotifiedAt: true }
+      });
+      if (cart) {
+        if (cart.status === CartStatus.ABANDONED) {
+          await this.prisma.cart.update({ where: { id: cart.id }, data: { status: CartStatus.ACTIVE, abandonedAt: null } });
+        }
+        return { id: cart.id, lucidNotifiedAt: cart.lucidNotifiedAt, isNew: false };
+      }
+
+      // Sin carrito para ese token: crearlo aquí evita que getOrCreate repita la misma búsqueda.
+      const created = await this.createCart(null);
+      return { id: created.id, lucidNotifiedAt: created.lucidNotifiedAt, isNew: true };
+    }
+
+    const cart = await this.getOrCreate(sessionToken, customerId);
+    return { id: cart.id, lucidNotifiedAt: cart.lucidNotifiedAt, isNew: false };
+  }
+
   private async createCart(customerId: string | null): Promise<CartWithItems> {
     const cart = await this.prisma.cart.create({
       data: { customerId, sessionToken: randomBytes(24).toString("hex") }
     });
-    return this.reload(cart.id);
+    // Un carrito recién creado no tiene ítems ni cupón: releerlo con CART_INCLUDE solo cuesta viajes a la base.
+    return { ...cart, coupon: null, items: [] };
   }
 
   private async mergeGuestCart(sessionToken: string, targetCartId: string): Promise<void> {
@@ -310,6 +343,25 @@ export class CartService {
     await this.prisma.cart.update({ where: { id: guestCart.id }, data: { status: CartStatus.CONVERTED } });
   }
 
+  /**
+   * Ítem del carrito de ese token con lo mínimo para validar y escribir. Evita cargar todo
+   * el árbol del carrito (CART_INCLUDE) solo para localizar una fila.
+   */
+  private async findOwnedItem(sessionToken: string, itemId: string) {
+    const item = await this.prisma.cartItem.findFirst({
+      where: { id: itemId, cart: { sessionToken, status: { in: [CartStatus.ACTIVE, CartStatus.ABANDONED] } } },
+      select: {
+        id: true,
+        productId: true,
+        variantId: true,
+        product: { select: { allowBackorder: true, stock: true } },
+        cart: { select: { id: true, lucidNotifiedAt: true } }
+      }
+    });
+    if (!item) throw new NotFoundException("Ítem no encontrado");
+    return item;
+  }
+
   private async findItem(cartId: string, productId: string, variantId: string | null): Promise<{ id: string; quantity: number } | null> {
     return this.prisma.cartItem.findFirst({
       where: { cartId, productId, variantId },
@@ -324,8 +376,13 @@ export class CartService {
     }
   }
 
-  private async touch(cartId: string): Promise<void> {
-    await this.prisma.cart.update({ where: { id: cartId }, data: { lucidNotifiedAt: null } });
+  /**
+   * Reabre la ventana de aviso de carrito abandonado. Si ya está en null no hay nada que
+   * reabrir y la escritura solo costaría un viaje a la base.
+   */
+  private async touch(cart: { id: string; lucidNotifiedAt: Date | null }): Promise<void> {
+    if (cart.lucidNotifiedAt === null) return;
+    await this.prisma.cart.update({ where: { id: cart.id }, data: { lucidNotifiedAt: null } });
   }
 
   private reload(cartId: string): Promise<CartWithItems> {
