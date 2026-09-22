@@ -28,6 +28,16 @@ export class StorefrontCatalogController {
     return this.catalogService.productDetail(slug);
   }
 
+  @Get("suggest")
+  suggest(@Query("q") q?: string): ReturnType<StorefrontCatalogService["suggest"]> {
+    return this.catalogService.suggest(q ?? "");
+  }
+
+  @Get("stats")
+  stats(): ReturnType<StorefrontCatalogService["stats"]> {
+    return this.catalogService.stats();
+  }
+
   @Get("categories")
   categories(): ReturnType<StorefrontCatalogService["categoryTree"]> {
     return this.catalogService.categoryTree();

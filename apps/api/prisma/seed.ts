@@ -8,14 +8,18 @@ function buildAdapter(): PrismaMariaDb {
   if (!url) throw new Error("DATABASE_URL is not defined");
 
   const parsed = new URL(url);
-  return new PrismaMariaDb({
-    host: parsed.hostname,
-    port: parsed.port ? Number(parsed.port) : 3306,
-    user: decodeURIComponent(parsed.username),
-    password: decodeURIComponent(parsed.password),
-    database: parsed.pathname.replace(/^\//, ""),
-    connectionLimit: 5
-  });
+  return new PrismaMariaDb(
+    {
+      host: parsed.hostname,
+      port: parsed.port ? Number(parsed.port) : 3306,
+      user: decodeURIComponent(parsed.username),
+      password: decodeURIComponent(parsed.password),
+      database: parsed.pathname.replace(/^\//, ""),
+      connectionLimit: 5
+    },
+    // Mismo motivo que en prisma.service.ts: evita el error 1267 en los LIKE.
+    { useTextProtocol: true }
+  );
 }
 
 const prisma = new PrismaClient({ adapter: buildAdapter() });
@@ -142,7 +146,13 @@ async function seedBaseSettings(): Promise<void> {
     { key: "services.redirectUrl", value: "https://limpiarteenhoras.com", group: "store" },
     { key: "tracking.ga4Id", value: "", group: "tracking" },
     { key: "tracking.gtmId", value: "", group: "tracking" },
-    { key: "tracking.metaPixelId", value: "", group: "tracking" }
+    { key: "tracking.metaPixelId", value: "", group: "tracking" },
+    // Cifras de la portada: texto libre ("1071+"). Vacío = se usa el número real del catálogo.
+    { key: "home.stats.products", value: "", group: "home" },
+    { key: "home.stats.customers", value: "", group: "home" },
+    { key: "home.stats.shipments", value: "", group: "home" },
+    { key: "home.stats.cities", value: "", group: "home" },
+    { key: "home.stats.units", value: "", group: "home" }
   ];
 
   for (const entry of defaults) {

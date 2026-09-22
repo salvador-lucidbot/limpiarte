@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @theme {
+  /* ── Escala de marca Limpiarte (#29ABE2) ─────────────────── */
   --color-brand-50: #eef8fd;
   --color-brand-100: #d9effa;
   --color-brand-200: #b6e2f6;
@@ -13,18 +14,201 @@
   --color-brand-900: #14506d;
   --color-navy-800: #16405c;
   --color-navy-900: #0e2f46;
+
+  /* ── Roles de la dirección de arte ───────────────────────── */
+  --color-primary: #29abe2;
+  --color-primary-dark: #1690c8;
+  --color-accent: #7fd8f7;
+  --color-contrast: #0e2f46;
+  --color-ink: #16303f;
   --color-surface: #f2f5f7;
-  --font-sans: "Segoe UI", "Helvetica Neue", system-ui, -apple-system, sans-serif;
-  --font-logo: "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  --color-line: #dde6ec;
+  --color-soft: #eef3f7;
+
+  --font-sans: var(--font-manrope), "Segoe UI", "Helvetica Neue", system-ui, -apple-system, sans-serif;
+  --font-logo: var(--font-manrope), "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+
+  --shadow-card: 0 1px 2px rgba(14, 47, 70, 0.05), 0 6px 20px rgba(14, 47, 70, 0.06);
+  --shadow-card-hover: 0 2px 4px rgba(14, 47, 70, 0.06), 0 16px 40px rgba(14, 47, 70, 0.12);
+  --shadow-primary: 0 10px 28px rgba(41, 171, 226, 0.34);
+  --shadow-primary-sm: 0 4px 14px rgba(41, 171, 226, 0.28);
 }
 
 body {
   background-color: var(--color-surface);
-  color: #29343d;
+  color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
   background-color: var(--color-brand-200);
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+@layer components {
+  /* ── Botones ─────────────────────────────────────────────── */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    background-color: var(--color-primary);
+    padding: 0.75rem 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    box-shadow: var(--shadow-primary-sm);
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--color-primary-dark);
+    box-shadow: var(--shadow-primary);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.6;
+    box-shadow: none;
+  }
+
+  .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-line);
+    background-color: #fff;
+    padding: 0.75rem 1.5rem;
+    font-weight: 700;
+    color: var(--color-ink);
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .btn-outline:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    transition: gap 0.2s, color 0.2s;
+  }
+
+  .btn-ghost:hover {
+    gap: 0.625rem;
+    color: var(--color-primary-dark);
+  }
+
+  /* ── Superficies ─────────────────────────────────────────── */
+  .card {
+    border-radius: 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-line) 60%, transparent);
+    background-color: #fff;
+    box-shadow: var(--shadow-card);
+  }
+
+  .listing-card {
+    overflow: hidden;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-line) 60%, transparent);
+    background-color: #fff;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.3s, transform 0.3s, border-color 0.3s;
+  }
+
+  .listing-card:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-4px);
+  }
+
+  .category-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-line) 60%, transparent);
+    background-color: #fff;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.25s, transform 0.25s, border-color 0.25s;
+  }
+
+  .category-card:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-4px);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    padding: 0.125rem 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  /* ── Formularios ─────────────────────────────────────────── */
+  .input {
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-line);
+    background-color: #fff;
+    padding: 0.625rem 0.875rem;
+    color: var(--color-ink);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+  }
+
+  .input::placeholder {
+    color: #94a8b5;
+  }
+
+  /* ── Tipografía de sección ───────────────────────────────── */
+  .section-title {
+    font-size: 1.875rem;
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-contrast);
+  }
+
+  .section-subtitle {
+    margin-top: 0.5rem;
+    color: #5b7183;
+  }
+
+  .nav-link {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    transition: color 0.2s;
+  }
+
+  .nav-link:hover {
+    color: var(--color-primary);
+  }
 }

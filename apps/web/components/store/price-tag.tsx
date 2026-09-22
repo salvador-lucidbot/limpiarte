@@ -18,7 +18,7 @@ export function PriceTag({ price, compareAtPrice, size = "sm" }: PriceTagProps):
       <div>
         {hasDiscount && <p className="text-sm text-slate-400 line-through">{formatCOP(compareAtPrice)}</p>}
         <div className="flex items-baseline gap-2.5">
-          <span className="text-4xl font-light tracking-tight text-navy-900">{formatCOP(price)}</span>
+          <span className="text-4xl font-bold tracking-tight text-ink">{formatCOP(price)}</span>
           {hasDiscount && <span className="text-lg font-medium text-emerald-600">{discountPercent(price, compareAtPrice)}% OFF</span>}
         </div>
       </div>
@@ -29,7 +29,7 @@ export function PriceTag({ price, compareAtPrice, size = "sm" }: PriceTagProps):
     <div>
       {hasDiscount && <p className="text-xs text-slate-400 line-through">{formatCOP(compareAtPrice)}</p>}
       <div className="flex items-baseline gap-1.5">
-        <span className="text-xl font-medium tracking-tight text-navy-900">{formatCOP(price)}</span>
+        <span className="text-xl font-bold tracking-tight text-ink">{formatCOP(price)}</span>
         {hasDiscount && <span className="text-xs font-semibold text-emerald-600">{discountPercent(price, compareAtPrice)}% OFF</span>}
       </div>
     </div>

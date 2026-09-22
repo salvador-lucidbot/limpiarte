@@ -39,6 +39,10 @@ export function CartProvider({ children }: { children: ReactNode }): ReactNode {
     return view.sessionToken;
   }, [persistToken, token]);
 
+  // Para agregar el primer ítem no hace falta crear el carrito antes: la API lo crea sola si el
+  // token no existe y devuelve el definitivo. Así el primer clic paga un viaje y no dos.
+  const tokenForAdd = useCallback((): string => window.localStorage.getItem(CART_TOKEN_KEY) ?? "nuevo", []);
+
   const refresh = useCallback(async (): Promise<void> => {
     const stored = window.localStorage.getItem(CART_TOKEN_KEY);
     if (!stored) return;
@@ -75,15 +79,20 @@ export function CartProvider({ children }: { children: ReactNode }): ReactNode {
       cart,
       loading,
       refresh,
-      addItem: (productId, variantId, quantity) =>
-        runAction((cartToken) =>
-          apiFetch<CartView>(`/cart/${cartToken}/items`, {
+      addItem: async (productId, variantId, quantity) => {
+        setLoading(true);
+        try {
+          const view = await apiFetch<CartView>(`/cart/${tokenForAdd()}/items`, {
             method: "POST",
             body: { productId, variantId: variantId ?? undefined, quantity },
             token,
             revalidate: false
-          })
-        ),
+          });
+          persistToken(view);
+        } finally {
+          setLoading(false);
+        }
+      },
       updateItem: (itemId, quantity) =>
         runAction((cartToken) =>
           apiFetch<CartView>(`/cart/${cartToken}/items/${itemId}`, { method: "PUT", body: { quantity }, token, revalidate: false })
@@ -95,7 +104,7 @@ export function CartProvider({ children }: { children: ReactNode }): ReactNode {
       removeCoupon: () =>
         runAction((cartToken) => apiFetch<CartView>(`/cart/${cartToken}/coupon`, { method: "DELETE", token, revalidate: false }))
     }),
-    [cart, loading, refresh, runAction, token]
+    [cart, loading, persistToken, refresh, runAction, token, tokenForAdd]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

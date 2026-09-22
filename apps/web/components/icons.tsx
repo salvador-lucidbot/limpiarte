@@ -530,3 +530,46 @@ export function IconWhatsApp(props: IconProps): React.ReactNode {
     </svg>
   );
 }
+
+export function IconSprayBottle(props: IconProps): React.ReactNode {
+  return (
+    <Icon {...props}>
+      <path d="M9 8.5h4.6a2 2 0 0 1 2 2V20a1.5 1.5 0 0 1-1.5 1.5h-5.6A1.5 1.5 0 0 1 7 20v-9.5a2 2 0 0 1 2-2z" />
+      <path d="M9.4 8.5V5.6a1 1 0 0 1 1-1h2.2a1 1 0 0 1 1 1v2.9" />
+      <path d="M13.6 6h3.2l2.3-2.2M17.4 8.4h3.2" />
+      <path d="M9 13h4.6" />
+    </Icon>
+  );
+}
+
+export function IconGlove(props: IconProps): React.ReactNode {
+  return (
+    <Icon {...props}>
+      <path d="M7 21v-4.4l-1.5-2a2 2 0 0 1 3-2.6l.8.9V5.2a1.4 1.4 0 0 1 2.8 0v4.4m0 0V4.1a1.4 1.4 0 0 1 2.8 0v5.5m0 0V5.6a1.4 1.4 0 0 1 2.8 0v8.1A7.3 7.3 0 0 1 16 21" />
+      <path d="M7 21h9" />
+    </Icon>
+  );
+}
+
+export function IconPaperRoll(props: IconProps): React.ReactNode {
+  return (
+    <Icon {...props}>
+      <ellipse cx="8.5" cy="7" rx="4.5" ry="3" />
+      <path d="M4 7v9c0 1.7 2 3 4.5 3s4.5-1.3 4.5-3V7" />
+      <path d="M13 10h5a2 2 0 0 1 2 2v7h-7" />
+      <path d="M8.5 5.6v2.8" />
+    </Icon>
+  );
+}
+
+export function IconCar(props: IconProps): React.ReactNode {
+  return (
+    <Icon {...props}>
+      <path d="M4.5 16.5v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2M22 16.5v2a1 1 0 0 1-1 1h-.5a1 1 0 0 1-1-1v-2" />
+      <path d="M2.5 16.5v-4l2-5A2 2 0 0 1 6.4 6h11.2a2 2 0 0 1 1.9 1.4l2 5v4a1 1 0 0 1-1 1h-17a1 1 0 0 1-1-1z" />
+      <path d="M3.4 11.8h17.2" />
+      <circle cx="7" cy="14.2" r="1" />
+      <circle cx="17" cy="14.2" r="1" />
+    </Icon>
+  );
+}

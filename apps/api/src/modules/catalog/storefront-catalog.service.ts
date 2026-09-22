@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PaginatedResult, paginate, skipTake } from "../../common/pagination/pagination.dto";
-import { Prisma, ProductStatus } from "../../generated/prisma/client";
+import { OrderStatus, Prisma, ProductStatus } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CatalogQueryDto } from "./dto/catalog-query.dto";
 import { PricingService } from "./pricing.service";
@@ -28,6 +28,34 @@ export interface CategoryNode {
   bannerUrl: string | null;
   description: string | null;
   children: CategoryNode[];
+}
+
+export interface SuggestProduct {
+  slug: string;
+  name: string;
+  price: number;
+  compareAtPrice: number | null;
+  imageUrl: string | null;
+  categoryName: string | null;
+  brandName: string | null;
+}
+
+export interface SearchSuggestions {
+  query: string;
+  products: SuggestProduct[];
+  categories: { name: string; slug: string }[];
+  brands: { name: string; slug: string }[];
+}
+
+/** Cifras públicas de la tienda. Todas salen de la base; la vitrina oculta las que estén en cero. */
+export interface StorefrontStats {
+  products: number;
+  categories: number;
+  brands: number;
+  unitsInStock: number;
+  ordersDelivered: number;
+  customers: number;
+  cities: number;
 }
 
 export interface FacetOption {
@@ -112,6 +140,13 @@ type CardProduct = Prisma.ProductGetPayload<{
   };
 }>;
 
+/** Lo mínimo para pintar una fila del autocompletado: sin etiquetas ni variantes. */
+const SUGGEST_INCLUDE = {
+  brand: { select: { name: true } },
+  category: { select: { name: true, slug: true } },
+  images: { orderBy: { position: "asc" }, take: 1, select: { url: true } }
+} satisfies Prisma.ProductInclude;
+
 const CARD_INCLUDE = {
   brand: true,
   category: true,
@@ -119,6 +154,30 @@ const CARD_INCLUDE = {
   tags: { include: { tag: true } },
   variants: { where: { isActive: true } }
 } satisfies Prisma.ProductInclude;
+
+/** Minúsculas y sin tildes, para puntuar coincidencias del mismo modo que las compara MySQL. */
+function normalize(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+/**
+ * Puntúa qué tan directa es la coincidencia: primero lo que empieza por el término,
+ * luego lo que lo tiene al inicio de una palabra, y de último lo que solo coincide
+ * en la descripción o las etiquetas.
+ */
+function matchScore(product: { name: string; brand?: { name: string } | null; category?: { name: string } | null }, term: string): number {
+  const name = normalize(product.name);
+  if (name.startsWith(term)) return 4;
+  if (name.split(/[\s\/-]+/).some((word) => word.startsWith(term))) return 3;
+  if (name.includes(term)) return 2;
+  const brand = product.brand ? normalize(product.brand.name) : "";
+  const category = product.category ? normalize(product.category.name) : "";
+  if (brand.includes(term) || category.includes(term)) return 1;
+  return 0;
+}
 
 @Injectable()
 export class StorefrontCatalogService {
@@ -347,6 +406,86 @@ export class StorefrontCatalogService {
         title: product.seoTitle ?? product.name,
         description: product.seoDescription ?? product.description?.slice(0, 160) ?? null
       }
+    };
+  }
+
+  async suggest(rawQuery: string, limit = 6): Promise<SearchSuggestions> {
+    const query = (rawQuery ?? "").trim();
+    if (query.length < 2) return { query, products: [], categories: [], brands: [] };
+
+    const activeProducts: Prisma.ProductWhereInput = { deletedAt: null, status: ProductStatus.ACTIVE };
+    const term = normalize(query);
+
+    const [candidates, categories, brands] = await Promise.all([
+      this.prisma.product.findMany({
+        where: {
+          ...activeProducts,
+          OR: [
+            { name: { contains: query } },
+            { description: { contains: query } },
+            { brand: { name: { contains: query } } },
+            { category: { name: { contains: query } } },
+            { tags: { some: { tag: { name: { contains: query } } } } }
+          ]
+        },
+        include: SUGGEST_INCLUDE,
+        take: limit * 3
+      }),
+      this.prisma.category.findMany({
+        where: { name: { contains: query }, products: { some: activeProducts } },
+        select: { name: true, slug: true },
+        orderBy: { name: "asc" },
+        take: 4
+      }),
+      this.prisma.brand.findMany({
+        where: { name: { contains: query }, products: { some: activeProducts } },
+        select: { name: true, slug: true },
+        orderBy: { name: "asc" },
+        take: 4
+      })
+    ]);
+
+    const products = candidates
+      .map((product) => ({ product, score: matchScore(product, term) }))
+      .sort((a, b) => b.score - a.score || a.product.name.localeCompare(b.product.name, "es"))
+      .slice(0, limit)
+      .map(({ product }) => {
+        const pricing = this.pricingService.resolve(product);
+        return {
+          slug: product.slug,
+          name: product.name,
+          price: pricing.price,
+          compareAtPrice: pricing.compareAtPrice,
+          imageUrl: product.images[0]?.url ?? null,
+          categoryName: product.category?.name ?? null,
+          brandName: product.brand?.name ?? null
+        };
+      });
+
+    return { query, products, categories, brands };
+  }
+
+  async stats(): Promise<StorefrontStats> {
+    const activeProducts = { deletedAt: null, status: ProductStatus.ACTIVE };
+
+    const [products, categories, brands, stock, ordersDelivered, customers, cities] = await Promise.all([
+      this.prisma.product.count({ where: activeProducts }),
+      this.prisma.category.count({ where: { products: { some: activeProducts } } }),
+      this.prisma.brand.count({ where: { products: { some: activeProducts } } }),
+      this.prisma.product.aggregate({ where: activeProducts, _sum: { stock: true } }),
+      this.prisma.order.count({ where: { status: OrderStatus.DELIVERED } }),
+      this.prisma.customer.count(),
+      this.prisma.shippingCity.count({ where: { zone: { isActive: true } } })
+    ]);
+
+    return {
+      products,
+      categories,
+      brands,
+      unitsInStock: stock._sum.stock ?? 0,
+      ordersDelivered,
+      customers,
+      cities
     };
   }
 

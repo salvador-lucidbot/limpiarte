@@ -1,39 +1,86 @@
 import Link from "next/link";
 import { ProductCard } from "../../lib/api/types";
-import { IconDroplets } from "../icons";
+import { formatCOP } from "../../lib/format";
+import { IconCheckCircle, IconDroplets, IconTag } from "../icons";
 import { AddToCartButton } from "./add-to-cart-button";
-import { PriceTag } from "./price-tag";
+
+function discountPercent(price: number, compareAtPrice: number): number {
+  return Math.round((1 - price / compareAtPrice) * 100);
+}
 
 export function ProductCardView({ product }: { product: ProductCard }): React.ReactNode {
+  const hasDiscount = product.compareAtPrice !== null && product.compareAtPrice > product.price;
+  const productHref = `/producto/${product.slug}`;
+
   return (
-    <article className="group flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white transition hover:border-slate-300 hover:shadow-lg">
-      <Link href={`/producto/${product.slug}`} className="relative block aspect-square overflow-hidden border-b border-slate-100 bg-white">
-        {product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            loading="lazy"
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-brand-50 to-slate-50 text-brand-200">
-            <IconDroplets size={56} strokeWidth={1.2} />
-          </div>
-        )}
-        {!product.inStock && (
-          <span className="absolute right-2.5 top-2.5 rounded bg-slate-700 px-2 py-0.5 text-[11px] font-semibold text-white">
+    <article className="listing-card group flex flex-col">
+      <div className="relative aspect-[4/3] overflow-hidden bg-soft">
+        <Link href={productHref} className="block h-full w-full">
+          {product.imageUrl ? (
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-50 to-soft text-brand-200">
+              <IconDroplets size={54} strokeWidth={1.2} />
+            </span>
+          )}
+        </Link>
+
+        {!product.inStock ? (
+          <span className="absolute left-3 top-3 rounded-full bg-slate-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
             Agotado
           </span>
-        )}
-      </Link>
-      <div className="flex flex-1 flex-col gap-1 p-3.5">
-        {product.brandName && <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{product.brandName}</span>}
-        <Link href={`/producto/${product.slug}`} className="line-clamp-2 text-sm leading-snug text-slate-700 transition group-hover:text-brand-700">
-          {product.name}
-        </Link>
-        <div className="mt-2 flex items-end justify-between gap-2">
-          <PriceTag price={product.price} compareAtPrice={product.compareAtPrice} />
-          <AddToCartButton productId={product.id} compact disabled={!product.inStock} />
+        ) : hasDiscount ? (
+          <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+            <IconTag size={11} />
+            {discountPercent(product.price, product.compareAtPrice as number)}% OFF
+          </span>
+        ) : product.isFeatured ? (
+          <span className="absolute left-3 top-3 rounded-full bg-primary px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+            Destacado
+          </span>
+        ) : null}
+      </div>
+
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          {product.categoryName && (
+            <span className="badge border border-primary/20 bg-primary/10 text-primary">{product.categoryName}</span>
+          )}
+          {product.brandName && (
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{product.brandName}</span>
+          )}
+        </div>
+
+        <h3 className="mb-2 line-clamp-2 text-sm font-bold leading-snug text-ink transition-colors group-hover:text-primary sm:text-base">
+          <Link href={productHref}>{product.name}</Link>
+        </h3>
+
+        <div className="mt-auto">
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              {hasDiscount && <p className="text-xs text-slate-400 line-through">{formatCOP(product.compareAtPrice as number)}</p>}
+              <p className="text-lg font-bold tracking-tight text-ink sm:text-xl">{formatCOP(product.price)}</p>
+            </div>
+            <AddToCartButton productId={product.id} compact disabled={!product.inStock} />
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-soft pt-3">
+            <span className={`flex items-center gap-1 text-[11px] font-semibold ${product.inStock ? "text-emerald-600" : "text-slate-400"}`}>
+              {product.inStock && <IconCheckCircle size={13} />}
+              {product.inStock ? "Disponible" : "Sin stock"}
+            </span>
+            <Link
+              href={productHref}
+              className="rounded-lg bg-primary/10 px-3 py-1 text-xs font-bold text-primary transition-all group-hover:bg-primary group-hover:text-white"
+            >
+              Ver detalles
+            </Link>
+          </div>
         </div>
       </div>
     </article>

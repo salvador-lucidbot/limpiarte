@@ -14,6 +14,7 @@ interface ApiFetchOptions {
   body?: unknown;
   token?: string | null;
   revalidate?: number | false;
+  signal?: AbortSignal;
 }
 
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
@@ -25,6 +26,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     method: options.method ?? "GET",
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    signal: options.signal,
     next: options.revalidate === undefined ? { revalidate: 60 } : options.revalidate === false ? undefined : { revalidate: options.revalidate },
     cache: options.revalidate === false ? "no-store" : undefined
   });

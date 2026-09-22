@@ -53,7 +53,13 @@ const PUBLIC_SETTING_KEYS = [
   "tracking.gtmId",
   "tracking.metaPixelId",
   "services.redirectUrl",
-  "home.sections"
+  "home.sections",
+  // Cifras de la portada. Si una queda vacía, la vitrina usa el número real del catálogo.
+  "home.stats.products",
+  "home.stats.customers",
+  "home.stats.shipments",
+  "home.stats.cities",
+  "home.stats.units"
 ];
 
 @Controller()

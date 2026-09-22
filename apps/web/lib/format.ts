@@ -11,3 +11,9 @@ export function formatCOP(value: number | string): string {
 export function formatDate(value: string | Date): string {
   return new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
+
+const numberFormatter = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 });
+
+export function formatNumber(value: number): string {
+  return numberFormatter.format(value);
+}
