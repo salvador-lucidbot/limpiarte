@@ -589,3 +589,22 @@ export function IconWhatsApp(props: IconProps): React.ReactNode {
     </svg>
   );
 }
+
+export function IconHelpCircle(props: IconProps): React.ReactNode {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="M9.2 9.3a2.9 2.9 0 0 1 5.6 1c0 1.9-2.8 2.4-2.8 4" />
+      <path d="M12 17.2h.01" strokeWidth={2.4} />
+    </Icon>
+  );
+}
+
+export function IconBookOpen(props: IconProps): React.ReactNode {
+  return (
+    <Icon {...props}>
+      <path d="M12 6.8C10.6 5.6 8.6 5 6 5H3.5v13H6c2.6 0 4.6.6 6 1.8 1.4-1.2 3.4-1.8 6-1.8h2.5V5H18c-2.6 0-4.6.6-6 1.8z" />
+      <path d="M12 6.8v13" />
+    </Icon>
+  );
+}

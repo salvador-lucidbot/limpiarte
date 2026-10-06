@@ -10,6 +10,7 @@ import {
   IconClipboardList,
   IconFileText,
   IconGrid,
+  IconHelpCircle,
   IconImage,
   IconLogOut,
   IconPackage,
@@ -50,6 +51,14 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/auditoria", label: "Auditoría", icon: IconFileText, permission: "audit.view" }
 ];
 
+/** Visible para todo el equipo, sin permiso: es la documentación de uso y de la operación. */
+const HELP_ITEM: NavItem = {
+  href: "/admin/manual",
+  label: "Manual de funciones",
+  icon: IconHelpCircle,
+  permission: null
+};
+
 export default function AdminPanelLayout({ children }: { children: React.ReactNode }): React.ReactNode {
   const { user, ready, hasPermission, logout } = useAdminAuth();
   const router = useRouter();
@@ -89,6 +98,20 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
               </Link>
             );
           })}
+
+          <span className="my-2 block border-t border-white/10" />
+
+          <Link
+            href={HELP_ITEM.href}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
+              pathname.startsWith(HELP_ITEM.href)
+                ? "bg-brand-500 font-semibold text-white"
+                : "hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            <HELP_ITEM.icon size={17} className={pathname.startsWith(HELP_ITEM.href) ? "text-white" : "text-stone-400"} />
+            {HELP_ITEM.label}
+          </Link>
         </nav>
         <div className="border-t border-white/10 p-4">
           <p className="truncate text-sm font-medium text-white">
