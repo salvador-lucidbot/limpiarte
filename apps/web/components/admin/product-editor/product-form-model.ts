@@ -1,7 +1,11 @@
-import { PRODUCT_CONTENT_LIMITS, PRODUCT_SPEC_GROUPS, PRODUCT_SPEC_GROUP_LABELS } from "../../../lib/api/types";
+import { BANNER_HEIGHT_RANGE, BANNER_OVERLAY_RANGE, PRODUCT_CONTENT_LIMITS, PRODUCT_SPEC_GROUPS, PRODUCT_SPEC_GROUP_LABELS } from "../../../lib/api/types";
 import type {
+  AdminOfferPack,
   AdminProductDetail,
   AdminProductPayload,
+  BannerFocus,
+  BannerTextPlacement,
+  ProductOfferPackInput,
   ProductDocumentKind,
   ProductRelationType,
   ProductSpecGroup,
@@ -11,7 +15,7 @@ import type {
 } from "../../../lib/api/types";
 import { contentBlocksError, contentBlocksPayload, contentBlocksToForm } from "../content-block-model";
 import type { ContentBlockFormValue } from "../content-block-model";
-import { decimalToInput, isHttpUrl, optionalInteger, optionalNumber, optionalText } from "../list-editing";
+import { createLocalKey, decimalToInput, isHttpUrl, optionalInteger, optionalNumber, optionalText } from "../list-editing";
 import { slugify } from "../slugify";
 import { activeOptionsOf, variantLabel, variantValueTexts } from "./variant-combinations";
 
@@ -19,7 +23,75 @@ export interface ProductFormImage {
   key: string;
   url: string;
   alt: string;
+  isCover: boolean;
 }
+
+export interface ProductFormBanner {
+  url: string;
+  linkUrl: string;
+  alt: string;
+  height: number | null;
+  focus: BannerFocus;
+  title: string;
+  subtitle: string;
+  ctaLabel: string;
+  textPlacement: BannerTextPlacement;
+  textOnDark: boolean;
+  overlay: number;
+}
+
+export type BannerSlot = "topBanner" | "bottomBanner";
+
+export const SECTION_TITLE_KEYS = [
+  "highlightsTitle",
+  "highlightsSubtitle",
+  "descriptionTitle",
+  "descriptionSubtitle",
+  "usageTitle",
+  "videosTitle",
+  "documentsTitle",
+  "contentTitle"
+] as const;
+
+export type SectionTitleKey = (typeof SECTION_TITLE_KEYS)[number];
+
+export type ProductFormSectionTitles = Record<SectionTitleKey, string>;
+
+export interface ProductFormOfferPack {
+  key: string;
+  eyebrow: string;
+  title: string;
+  badgeLabel: string;
+  quantity: string;
+  price: string;
+  compareAtPrice: string;
+  imageUrl: string;
+  ctaLabel: string;
+  isHighlighted: boolean;
+}
+
+export const OFFER_PACK_LIMITS = {
+  packs: 4,
+  quantity: 20,
+  eyebrowLength: 60,
+  titleLength: 120,
+  badgeLength: 80,
+  ctaLength: 60
+} as const;
+
+export const BANNER_TEXT_LIMITS = {
+  title: 160,
+  subtitle: 300,
+  cta: 60,
+  alt: 160
+} as const;
+
+export const SECTION_TITLE_LIMITS = {
+  title: 120,
+  subtitle: 300
+} as const;
+
+export const DEFAULT_BANNER_HEIGHT = 320;
 
 export interface ProductFormOptionValue {
   key: string;
@@ -115,12 +187,10 @@ export interface ProductFormValue {
   promoBuyQuantity: string;
   usageMediaUrl: string;
   usageMediaKind: UsageMediaKind | "";
-  topBannerUrl: string;
-  topBannerLinkUrl: string;
-  topBannerAlt: string;
-  bottomBannerUrl: string;
-  bottomBannerLinkUrl: string;
-  bottomBannerAlt: string;
+  topBanner: ProductFormBanner;
+  bottomBanner: ProductFormBanner;
+  sectionTitles: ProductFormSectionTitles;
+  offerPacks: ProductFormOfferPack[];
   stock: string;
   lowStockThreshold: string;
   allowBackorder: boolean;
@@ -155,6 +225,50 @@ export type ProductFormUpdater = (update: (current: ProductFormValue) => Product
 
 export type ProductFieldSetter = <K extends keyof ProductFormValue>(key: K, fieldValue: ProductFormValue[K]) => void;
 
+export const EMPTY_BANNER: ProductFormBanner = {
+  url: "",
+  linkUrl: "",
+  alt: "",
+  height: null,
+  focus: "CENTRO",
+  title: "",
+  subtitle: "",
+  ctaLabel: "",
+  textPlacement: "IZQUIERDA",
+  textOnDark: true,
+  overlay: 0
+};
+
+function mapSectionTitles<T>(read: (key: SectionTitleKey) => T): Record<SectionTitleKey, T> {
+  return {
+    highlightsTitle: read("highlightsTitle"),
+    highlightsSubtitle: read("highlightsSubtitle"),
+    descriptionTitle: read("descriptionTitle"),
+    descriptionSubtitle: read("descriptionSubtitle"),
+    usageTitle: read("usageTitle"),
+    videosTitle: read("videosTitle"),
+    documentsTitle: read("documentsTitle"),
+    contentTitle: read("contentTitle")
+  };
+}
+
+export const EMPTY_SECTION_TITLES: ProductFormSectionTitles = mapSectionTitles(() => "");
+
+export function emptyOfferPack(): ProductFormOfferPack {
+  return {
+    key: createLocalKey(),
+    eyebrow: "",
+    title: "",
+    badgeLabel: "",
+    quantity: "1",
+    price: "",
+    compareAtPrice: "",
+    imageUrl: "",
+    ctaLabel: "",
+    isHighlighted: false
+  };
+}
+
 export const EMPTY_PRODUCT_FORM: ProductFormValue = {
   version: null,
   stockBaseline: null,
@@ -174,12 +288,10 @@ export const EMPTY_PRODUCT_FORM: ProductFormValue = {
   promoBuyQuantity: "",
   usageMediaUrl: "",
   usageMediaKind: "",
-  topBannerUrl: "",
-  topBannerLinkUrl: "",
-  topBannerAlt: "",
-  bottomBannerUrl: "",
-  bottomBannerLinkUrl: "",
-  bottomBannerAlt: "",
+  topBanner: EMPTY_BANNER,
+  bottomBanner: EMPTY_BANNER,
+  sectionTitles: EMPTY_SECTION_TITLES,
+  offerPacks: [],
   stock: "0",
   lowStockThreshold: "5",
   allowBackorder: false,
@@ -228,6 +340,87 @@ function highlightsOf(value: AdminProductDetail["highlights"]): string[] {
   return value.filter((item): item is string => typeof item === "string");
 }
 
+function clampToRange(value: number, range: { min: number; max: number }): number {
+  return Math.min(range.max, Math.max(range.min, Math.round(value)));
+}
+
+interface StoredBanner {
+  url: string | null;
+  linkUrl: string | null;
+  alt: string | null;
+  height: number | null;
+  focus: BannerFocus | null;
+  title: string | null;
+  subtitle: string | null;
+  ctaLabel: string | null;
+  textPlacement: BannerTextPlacement | null;
+  textOnDark: boolean;
+  overlay: number | null;
+}
+
+function bannerToForm(stored: StoredBanner): ProductFormBanner {
+  return {
+    url: stored.url ?? "",
+    linkUrl: stored.linkUrl ?? "",
+    alt: stored.alt ?? "",
+    height: stored.height === null ? null : clampToRange(stored.height, BANNER_HEIGHT_RANGE),
+    focus: stored.focus ?? EMPTY_BANNER.focus,
+    title: stored.title ?? "",
+    subtitle: stored.subtitle ?? "",
+    ctaLabel: stored.ctaLabel ?? "",
+    textPlacement: stored.textPlacement ?? EMPTY_BANNER.textPlacement,
+    textOnDark: stored.textOnDark,
+    overlay: stored.overlay === null ? 0 : clampToRange(stored.overlay, BANNER_OVERLAY_RANGE)
+  };
+}
+
+function topBannerOf(detail: AdminProductDetail): StoredBanner {
+  return {
+    url: detail.topBannerUrl,
+    linkUrl: detail.topBannerLinkUrl,
+    alt: detail.topBannerAlt,
+    height: detail.topBannerHeight ?? null,
+    focus: detail.topBannerFocus ?? null,
+    title: detail.topBannerTitle ?? null,
+    subtitle: detail.topBannerSubtitle ?? null,
+    ctaLabel: detail.topBannerCtaLabel ?? null,
+    textPlacement: detail.topBannerTextPlacement ?? null,
+    textOnDark: detail.topBannerTextOnDark ?? EMPTY_BANNER.textOnDark,
+    overlay: detail.topBannerOverlay ?? null
+  };
+}
+
+function bottomBannerOf(detail: AdminProductDetail): StoredBanner {
+  return {
+    url: detail.bottomBannerUrl,
+    linkUrl: detail.bottomBannerLinkUrl,
+    alt: detail.bottomBannerAlt,
+    height: detail.bottomBannerHeight ?? null,
+    focus: detail.bottomBannerFocus ?? null,
+    title: detail.bottomBannerTitle ?? null,
+    subtitle: detail.bottomBannerSubtitle ?? null,
+    ctaLabel: detail.bottomBannerCtaLabel ?? null,
+    textPlacement: detail.bottomBannerTextPlacement ?? null,
+    textOnDark: detail.bottomBannerTextOnDark ?? EMPTY_BANNER.textOnDark,
+    overlay: detail.bottomBannerOverlay ?? null
+  };
+}
+
+function offerPackToForm(pack: AdminOfferPack): ProductFormOfferPack {
+  return {
+    key: pack.id,
+    eyebrow: pack.eyebrow ?? "",
+    title: pack.title,
+    badgeLabel: pack.badgeLabel,
+    quantity: String(pack.quantity),
+    price: decimalToInput(pack.price),
+    compareAtPrice: decimalToInput(pack.compareAtPrice),
+    imageUrl: pack.imageUrl ?? "",
+    ctaLabel: pack.ctaLabel ?? "",
+    isHighlighted: pack.isHighlighted
+  };
+}
+
 export function detailToForm(detail: AdminProductDetail): ProductFormValue {
   const options = [...detail.options].sort((left, right) => left.position - right.position);
 
@@ -251,12 +444,10 @@ export function detailToForm(detail: AdminProductDetail): ProductFormValue {
     promoBuyQuantity: detail.promoBuyQuantity ? String(detail.promoBuyQuantity) : "",
     usageMediaUrl: detail.usageMediaUrl ?? "",
     usageMediaKind: detail.usageMediaKind ?? "",
-    topBannerUrl: detail.topBannerUrl ?? "",
-    topBannerLinkUrl: detail.topBannerLinkUrl ?? "",
-    topBannerAlt: detail.topBannerAlt ?? "",
-    bottomBannerUrl: detail.bottomBannerUrl ?? "",
-    bottomBannerLinkUrl: detail.bottomBannerLinkUrl ?? "",
-    bottomBannerAlt: detail.bottomBannerAlt ?? "",
+    topBanner: bannerToForm(topBannerOf(detail)),
+    bottomBanner: bannerToForm(bottomBannerOf(detail)),
+    sectionTitles: mapSectionTitles((key) => detail[key] ?? ""),
+    offerPacks: [...(detail.offerPacks ?? [])].sort((left, right) => left.position - right.position).map(offerPackToForm),
     stock: String(detail.stock),
     lowStockThreshold: String(detail.lowStockThreshold),
     allowBackorder: detail.allowBackorder,
@@ -276,7 +467,9 @@ export function detailToForm(detail: AdminProductDetail): ProductFormValue {
     tags: detail.tags.map((link) => link.tag.name).join(", "),
     highlights: highlightsOf(detail.highlights).map((text, index) => ({ key: `highlight-${index}`, text })),
     warrantyText: detail.warrantyText ?? "",
-    images: detail.images.map((image) => ({ key: image.id, url: image.url, alt: image.alt ?? "" })),
+    images: [...detail.images]
+      .sort((left, right) => left.position - right.position)
+      .map((image) => ({ key: image.id, url: image.url, alt: image.alt ?? "", isCover: image.isCover === true })),
     videos: detail.videos.map((video) => ({
       key: video.id,
       url: video.url,
@@ -359,6 +552,55 @@ function changedStock(stock: number, baseline: number | null): number | undefine
   return stock;
 }
 
+interface BannerPayload {
+  url: string | null;
+  linkUrl: string | null;
+  alt: string | null;
+  height: number | null;
+  focus: BannerFocus;
+  title: string | null;
+  subtitle: string | null;
+  ctaLabel: string | null;
+  textPlacement: BannerTextPlacement;
+  textOnDark: boolean;
+  overlay: number | null;
+}
+
+function bannerPayload(banner: ProductFormBanner): BannerPayload {
+  const overlay = clampToRange(banner.overlay, BANNER_OVERLAY_RANGE);
+  return {
+    url: optionalText(banner.url),
+    linkUrl: optionalText(banner.linkUrl),
+    alt: optionalText(banner.alt),
+    height: banner.height === null ? null : clampToRange(banner.height, BANNER_HEIGHT_RANGE),
+    focus: banner.focus,
+    title: optionalText(banner.title),
+    subtitle: optionalText(banner.subtitle),
+    ctaLabel: optionalText(banner.ctaLabel),
+    textPlacement: banner.textPlacement,
+    textOnDark: banner.textOnDark,
+    overlay: overlay > 0 ? overlay : null
+  };
+}
+
+export function offerPackQuantity(pack: ProductFormOfferPack): number {
+  return Math.min(OFFER_PACK_LIMITS.quantity, Math.max(1, optionalInteger(pack.quantity) ?? 1));
+}
+
+function offerPacksPayload(packs: ProductFormOfferPack[]): ProductOfferPackInput[] {
+  return packs.map((pack) => ({
+    eyebrow: optionalText(pack.eyebrow),
+    title: pack.title.trim(),
+    badgeLabel: pack.badgeLabel.trim(),
+    quantity: offerPackQuantity(pack),
+    price: optionalNumber(pack.price) ?? 0,
+    compareAtPrice: optionalNumber(pack.compareAtPrice),
+    imageUrl: optionalText(pack.imageUrl),
+    ctaLabel: optionalText(pack.ctaLabel),
+    isHighlighted: pack.isHighlighted
+  }));
+}
+
 function variantsPayload(options: ProductFormOption[], variants: ProductFormVariant[]): ProductVariantInput[] {
   return variants.map((variant) => {
     const baseline = variant.id ? variant.stockBaseline : null;
@@ -379,6 +621,10 @@ function variantsPayload(options: ProductFormOption[], variants: ProductFormVari
 
 export function buildProductPayload(form: ProductFormValue): AdminProductPayload {
   const activeOptions = activeOptionsOf(form.options);
+  const top = bannerPayload(form.topBanner);
+  const bottom = bannerPayload(form.bottomBanner);
+  const savedImages = form.images.filter((image) => image.url.trim().length > 0);
+  const coverIndex = savedImages.findIndex((image) => image.isCover);
 
   return {
     name: form.name.trim(),
@@ -397,12 +643,30 @@ export function buildProductPayload(form: ProductFormValue): AdminProductPayload
     promoBuyQuantity: optionalInteger(form.promoBuyQuantity),
     usageMediaUrl: optionalText(form.usageMediaUrl),
     usageMediaKind: form.usageMediaUrl.trim() ? form.usageMediaKind || null : null,
-    topBannerUrl: optionalText(form.topBannerUrl),
-    topBannerLinkUrl: optionalText(form.topBannerLinkUrl),
-    topBannerAlt: optionalText(form.topBannerAlt),
-    bottomBannerUrl: optionalText(form.bottomBannerUrl),
-    bottomBannerLinkUrl: optionalText(form.bottomBannerLinkUrl),
-    bottomBannerAlt: optionalText(form.bottomBannerAlt),
+    topBannerUrl: top.url,
+    topBannerLinkUrl: top.linkUrl,
+    topBannerAlt: top.alt,
+    topBannerHeight: top.height,
+    topBannerFocus: top.focus,
+    topBannerTitle: top.title,
+    topBannerSubtitle: top.subtitle,
+    topBannerCtaLabel: top.ctaLabel,
+    topBannerTextPlacement: top.textPlacement,
+    topBannerTextOnDark: top.textOnDark,
+    topBannerOverlay: top.overlay,
+    bottomBannerUrl: bottom.url,
+    bottomBannerLinkUrl: bottom.linkUrl,
+    bottomBannerAlt: bottom.alt,
+    bottomBannerHeight: bottom.height,
+    bottomBannerFocus: bottom.focus,
+    bottomBannerTitle: bottom.title,
+    bottomBannerSubtitle: bottom.subtitle,
+    bottomBannerCtaLabel: bottom.ctaLabel,
+    bottomBannerTextPlacement: bottom.textPlacement,
+    bottomBannerTextOnDark: bottom.textOnDark,
+    bottomBannerOverlay: bottom.overlay,
+    ...mapSectionTitles((key) => optionalText(form.sectionTitles[key])),
+    offerPacks: offerPacksPayload(form.offerPacks),
     stock: changedStock(optionalInteger(form.stock) ?? 0, form.stockBaseline),
     stockBaseline: form.stockBaseline ?? undefined,
     expectedVersion: form.version ?? undefined,
@@ -424,9 +688,12 @@ export function buildProductPayload(form: ProductFormValue): AdminProductPayload
     tags: form.tags ? form.tags.split(",").map((tag) => tag.trim()).filter(Boolean) : [],
     highlights: form.highlights.map((highlight) => highlight.text.trim()).filter((text) => text.length > 0),
     warrantyText: optionalText(form.warrantyText),
-    images: form.images
-      .filter((image) => image.url.trim().length > 0)
-      .map((image, index) => ({ url: image.url.trim(), alt: optionalText(image.alt) ?? undefined, position: index })),
+    images: savedImages.map((image, index) => ({
+      url: image.url.trim(),
+      alt: optionalText(image.alt) ?? undefined,
+      position: index,
+      isCover: index === coverIndex
+    })),
     videos: form.videos.map((video) => ({
       url: video.url.trim(),
       posterUrl: optionalText(video.posterUrl),
@@ -567,6 +834,48 @@ function contentError(form: ProductFormValue): string | null {
   return null;
 }
 
+function offerPacksError(form: ProductFormValue): string | null {
+  if (form.offerPacks.length > OFFER_PACK_LIMITS.packs) return `Puedes tener máximo ${OFFER_PACK_LIMITS.packs} packs de oferta.`;
+  for (const [index, pack] of form.offerPacks.entries()) {
+    const position = index + 1;
+    if (pack.title.trim() === "") return `El pack de oferta ${position} necesita un título.`;
+    if (pack.badgeLabel.trim() === "") return `El pack de oferta ${position} necesita la etiqueta destacada (por ejemplo, «Lleva 3 unidades»).`;
+    const quantity = optionalNumber(pack.quantity);
+    if (quantity === null || !Number.isInteger(quantity) || quantity < 1 || quantity > OFFER_PACK_LIMITS.quantity) {
+      return `La cantidad del pack de oferta ${position} debe ser un número entero entre 1 y ${OFFER_PACK_LIMITS.quantity}.`;
+    }
+    const price = optionalNumber(pack.price);
+    if (price === null || price <= 0) return `El pack de oferta ${position} necesita el precio total que se cobra.`;
+    if (pack.compareAtPrice.trim() !== "" && optionalNumber(pack.compareAtPrice) === null) {
+      return `El precio anterior del pack de oferta ${position} no es un número válido.`;
+    }
+    if (pack.imageUrl.trim() !== "" && !isHttpUrl(pack.imageUrl)) return `La imagen del pack de oferta ${position} debe ser una URL http(s) válida.`;
+  }
+  return null;
+}
+
+const INTERNAL_STORE_PATH = /^\/(?![\/\\])[^\s\\]*$/;
+
+function isStoreLink(value: string): boolean {
+  if (INTERNAL_STORE_PATH.test(value)) return true;
+  return isHttpUrl(value);
+}
+
+function bannersError(form: ProductFormValue): string | null {
+  const slots: { banner: ProductFormBanner; label: string }[] = [
+    { banner: form.topBanner, label: "superior" },
+    { banner: form.bottomBanner, label: "inferior" }
+  ];
+  for (const { banner, label } of slots) {
+    if (banner.url.trim() !== "" && !isHttpUrl(banner.url)) return `La imagen del banner ${label} debe ser una URL http(s) válida.`;
+    const link = banner.linkUrl.trim();
+    if (link !== "" && !isStoreLink(link)) {
+      return `El enlace del banner ${label} debe ser una ruta de la tienda (empieza por «/») o una URL http(s).`;
+    }
+  }
+  return null;
+}
+
 function mediaError(form: ProductFormValue): string | null {
   if (form.images.length > PRODUCT_CONTENT_LIMITS.images) return `Puedes tener máximo ${PRODUCT_CONTENT_LIMITS.images} imágenes.`;
   if (form.videos.length > PRODUCT_CONTENT_LIMITS.videos) return `Puedes tener máximo ${PRODUCT_CONTENT_LIMITS.videos} videos.`;
@@ -589,5 +898,5 @@ function mediaError(form: ProductFormValue): string | null {
 }
 
 export function validateProductForm(form: ProductFormValue): string | null {
-  return optionsError(form) ?? variantsError(form) ?? contentError(form) ?? mediaError(form);
+  return optionsError(form) ?? variantsError(form) ?? contentError(form) ?? offerPacksError(form) ?? bannersError(form) ?? mediaError(form);
 }

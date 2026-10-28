@@ -1,37 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import { CircleAlert, LoaderCircle, Save } from "lucide-react";
 import { GeneralSections } from "./product-editor/general-sections";
 import type { ProductSelectOption } from "./product-editor/general-sections";
 import { DocumentsSection, ImagesSection, VideosSection } from "./product-editor/media-sections";
+import { OfferPacksSection } from "./product-editor/offer-packs-section";
 import { HighlightsSection, SpecsSection, VisualContentSection, WarrantySection } from "./product-editor/page-content-sections";
 import { BannersSection, UsageMediaSection } from "./product-editor/promo-sections";
 import { validateProductForm } from "./product-editor/product-form-model";
 import type { ProductFormUpdater, ProductFormValue } from "./product-editor/product-form-model";
+import { PRODUCT_SECTION_NAV } from "./product-editor/product-sections";
 import { RelationsSection } from "./product-editor/relations-section";
+import { SectionTitlesSection } from "./product-editor/section-titles-section";
 import { FaqSection, SeoSection, TechnicalSheetSection } from "./product-editor/text-sections";
 import { VariantsSection } from "./product-editor/variants-section";
+import { SectionNav } from "./section-nav";
 import { Button } from "./ui";
-
-const SECTION_LINKS: { id: string; label: string }[] = [
-  { id: "producto-general", label: "General" },
-  { id: "producto-precios", label: "Precios" },
-  { id: "producto-inventario", label: "Inventario y medidas" },
-  { id: "producto-imagenes", label: "Imágenes" },
-  { id: "producto-videos", label: "Videos" },
-  { id: "producto-documentos", label: "Documentos" },
-  { id: "producto-variantes", label: "Variantes" },
-  { id: "producto-sobre", label: "Sobre este artículo" },
-  { id: "producto-especificaciones", label: "Especificaciones" },
-  { id: "producto-garantia", label: "Garantía" },
-  { id: "producto-modo-uso", label: "Modo de uso" },
-  { id: "producto-banners", label: "Banners" },
-  { id: "producto-contenido-visual", label: "Contenido visual" },
-  { id: "producto-ficha", label: "Ficha técnica" },
-  { id: "producto-relacionados", label: "Relacionados" },
-  { id: "producto-preguntas", label: "Preguntas" },
-  { id: "producto-seo", label: "SEO" }
-];
 
 interface ProductFormProps {
   value: ProductFormValue;
@@ -68,62 +53,60 @@ export function ProductForm({
   }
 
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (uploading) return;
-        const problem = validateProductForm(value);
-        setValidationError(problem);
-        if (problem) return;
-        onSubmit();
-      }}
-      className="space-y-6"
-    >
-      <nav aria-label="Secciones del producto" className="sticky top-0 z-20 -mx-2 overflow-x-auto bg-stone-100/95 px-2 py-2 backdrop-blur">
-        <ul className="flex gap-1.5 whitespace-nowrap">
-          {SECTION_LINKS.map((section) => (
-            <li key={section.id}>
-              <a
-                href={`#${section.id}`}
-                className="inline-block rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-medium text-stone-600 transition hover:border-brand-300 hover:text-brand-700"
-              >
-                {section.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start">
+      <SectionNav items={PRODUCT_SECTION_NAV} label="Secciones del producto" />
 
-      <GeneralSections value={value} onUpdate={onUpdate} categories={categories} brands={brands} />
-      <ImagesSection value={value} onUpdate={onUpdate} />
-      <VideosSection value={value} onUpdate={onUpdate} onUploadBusyChange={trackUpload} />
-      <DocumentsSection value={value} onUpdate={onUpdate} onUploadBusyChange={trackUpload} />
-      <VariantsSection value={value} onUpdate={onUpdate} />
-      <HighlightsSection value={value} onUpdate={onUpdate} />
-      <SpecsSection value={value} onUpdate={onUpdate} />
-      <WarrantySection value={value} onUpdate={onUpdate} />
-      <UsageMediaSection value={value} onUpdate={onUpdate} onUploadBusyChange={trackUpload} />
-      <BannersSection value={value} onUpdate={onUpdate} />
-      <VisualContentSection value={value} onUpdate={onUpdate} />
-      <TechnicalSheetSection value={value} onUpdate={onUpdate} />
-      <RelationsSection value={value} onUpdate={onUpdate} productId={productId} />
-      <FaqSection value={value} onUpdate={onUpdate} />
-      <SeoSection value={value} onUpdate={onUpdate} />
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (uploading) return;
+          const problem = validateProductForm(value);
+          setValidationError(problem);
+          if (problem) return;
+          onSubmit();
+        }}
+        className="min-w-0 space-y-6"
+      >
+        <GeneralSections value={value} onUpdate={onUpdate} categories={categories} brands={brands} />
+        <ImagesSection value={value} onUpdate={onUpdate} />
+        <VideosSection value={value} onUpdate={onUpdate} onUploadBusyChange={trackUpload} />
+        <DocumentsSection value={value} onUpdate={onUpdate} onUploadBusyChange={trackUpload} />
+        <VariantsSection value={value} onUpdate={onUpdate} />
+        <OfferPacksSection value={value} onUpdate={onUpdate} />
+        <BannersSection value={value} onUpdate={onUpdate} />
+        <SectionTitlesSection value={value} onUpdate={onUpdate} />
+        <HighlightsSection value={value} onUpdate={onUpdate} />
+        <SpecsSection value={value} onUpdate={onUpdate} />
+        <WarrantySection value={value} onUpdate={onUpdate} />
+        <UsageMediaSection value={value} onUpdate={onUpdate} onUploadBusyChange={trackUpload} />
+        <VisualContentSection value={value} onUpdate={onUpdate} />
+        <TechnicalSheetSection value={value} onUpdate={onUpdate} />
+        <RelationsSection value={value} onUpdate={onUpdate} productId={productId} />
+        <FaqSection value={value} onUpdate={onUpdate} />
+        <SeoSection value={value} onUpdate={onUpdate} />
 
-      <div className="sticky bottom-0 z-20 -mx-2 flex flex-wrap items-center justify-end gap-3 border-t border-stone-200 bg-stone-100/95 px-2 py-3 backdrop-blur">
-        <div className="mr-auto min-w-0 flex-1" aria-live="polite">
-          {visibleError && (
-            <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-              {visibleError}
-            </p>
-          )}
-          {!visibleError && uploading && <p className="text-sm text-stone-500">Espera a que terminen las subidas para guardar.</p>}
-          {!visibleError && !uploading && notice}
+        <div className="sticky bottom-3 z-20 flex flex-wrap items-center justify-end gap-3 rounded-2xl border border-ink-200 bg-white/95 px-4 py-3 shadow-float backdrop-blur">
+          <div className="mr-auto min-w-0 flex-1 basis-56" aria-live="polite">
+            {visibleError && (
+              <p role="alert" className="flex items-start gap-2 rounded-xl bg-danger-50 px-3 py-2 text-sm text-danger-700 wrap-break-word">
+                <CircleAlert size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
+                <span className="min-w-0">{visibleError}</span>
+              </p>
+            )}
+            {!visibleError && uploading && (
+              <p className="flex items-center gap-2 text-sm text-ink-600">
+                <LoaderCircle size={16} aria-hidden="true" className="shrink-0 animate-spin" />
+                Espera a que terminen las subidas para guardar.
+              </p>
+            )}
+            {!visibleError && !uploading && notice}
+          </div>
+          <Button type="submit" loading={submitting} disabled={uploading}>
+            {!submitting && <Save size={16} aria-hidden="true" />}
+            {submitLabel}
+          </Button>
         </div>
-        <Button type="submit" loading={submitting} disabled={uploading}>
-          {submitLabel}
-        </Button>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 }

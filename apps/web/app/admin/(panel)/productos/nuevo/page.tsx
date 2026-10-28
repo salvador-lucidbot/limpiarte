@@ -37,7 +37,7 @@ export default function NewProductPage(): React.ReactNode {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-navy-900">Nuevo producto</h1>
         <Link href="/admin/productos" className="text-sm text-stone-500 hover:text-brand-700">

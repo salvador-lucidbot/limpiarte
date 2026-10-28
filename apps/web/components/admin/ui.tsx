@@ -3,6 +3,7 @@
 import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
 import { ChevronDown, LoaderCircle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "../../lib/ui/cn";
 
 export const buttonVariants = cva(
@@ -30,7 +31,6 @@ export const buttonVariants = cva(
 
 type ButtonProps = React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
-    /** Mientras guarda muestra el indicador y bloquea el botón para evitar envíos dobles. */
     loading?: boolean;
   };
 
@@ -73,6 +73,7 @@ export function Badge({ children, tone, className }: { children: React.ReactNode
 
 interface CardProps {
   id?: string;
+  icon?: LucideIcon;
   title?: string;
   description?: string;
   actions?: React.ReactNode;
@@ -81,14 +82,21 @@ interface CardProps {
   className?: string;
 }
 
-export function Card({ id, title, description, actions, footer, children, className }: CardProps): React.ReactNode {
+export function Card({ id, icon: Icon, title, description, actions, footer, children, className }: CardProps): React.ReactNode {
   return (
     <section id={id} className={cn("scroll-mt-20 rounded-2xl border border-ink-200 bg-white shadow-card", className)}>
       {(title || actions) && (
         <header className="flex flex-wrap items-start justify-between gap-3 px-6 pt-6">
-          <div className="min-w-0">
-            {title && <h2 className="text-lg font-bold text-brand-900 wrap-break-word">{title}</h2>}
-            {description && <p className="mt-1 text-sm text-ink-600 wrap-break-word">{description}</p>}
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            {Icon && (
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                <Icon size={20} aria-hidden="true" />
+              </span>
+            )}
+            <div className="min-w-0">
+              {title && <h2 className="text-lg font-bold text-brand-900 wrap-break-word">{title}</h2>}
+              {description && <p className="mt-1 text-sm text-ink-600 wrap-break-word">{description}</p>}
+            </div>
           </div>
           {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
         </header>

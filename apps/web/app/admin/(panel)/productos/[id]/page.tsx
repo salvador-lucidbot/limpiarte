@@ -121,7 +121,7 @@ export default function EditProductPage(): React.ReactNode {
   if (!form) return <Loader fullScreen />;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-navy-900">Editar producto</h1>
         <div className="flex items-center gap-4">

@@ -27,7 +27,7 @@ import {
   UsageMediaKind
 } from "../../../generated/prisma/enums";
 import { PaginationDto } from "../../../common/pagination/pagination.dto";
-import { ContentBlockDto, HTTP_URL_OPTIONS, MAX_CONTENT_BLOCKS, MAX_URL_LENGTH } from "./content-block.dto";
+import { ContentBlockDto, HTTP_URL_OPTIONS, IsStoreLink, MAX_CONTENT_BLOCKS, MAX_URL_LENGTH } from "./content-block.dto";
 
 export const MAX_HIGHLIGHTS = 10;
 export const MAX_HIGHLIGHT_LENGTH = 300;
@@ -374,7 +374,7 @@ export class CreateProductDto {
   topBannerUrl?: string | null;
 
   @IsOptional()
-  @IsUrl(HTTP_URL_OPTIONS)
+  @IsStoreLink()
   @MaxLength(MAX_URL_LENGTH)
   topBannerLinkUrl?: string | null;
 
@@ -389,7 +389,7 @@ export class CreateProductDto {
   bottomBannerUrl?: string | null;
 
   @IsOptional()
-  @IsUrl(HTTP_URL_OPTIONS)
+  @IsStoreLink()
   @MaxLength(MAX_URL_LENGTH)
   bottomBannerLinkUrl?: string | null;
 

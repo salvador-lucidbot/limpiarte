@@ -1,15 +1,18 @@
 "use client";
 
+import { ClipboardList, LayoutTemplate, ListChecks, Plus, ShieldCheck } from "lucide-react";
 import { PRODUCT_CONTENT_LIMITS, PRODUCT_SPEC_GROUPS, PRODUCT_SPEC_GROUP_LABELS } from "../../../lib/api/types";
 import type { ProductSpecGroup } from "../../../lib/api/types";
-import { IconPlus } from "../../icons";
+import { cn } from "../../../lib/ui/cn";
 import { ContentBlocksEditor } from "../content-blocks-editor";
 import { createLocalKey, moveByKey, patchByKey, removeByKey, swapIndexes } from "../list-editing";
 import type { MoveOffset } from "../list-editing";
 import { LimitCounter, RowControls } from "../row-controls";
-import { Button, Card, Field, inputClass } from "../ui";
+import { Button, Field, inputClass, textareaClass } from "../ui";
+import { EditorNote, EditorSection, EmptyRows } from "./editor-section";
 import { fieldSetter } from "./product-form-model";
 import type { ProductFormHighlight, ProductFormSpec, ProductFormUpdater, ProductFormValue } from "./product-form-model";
+import { PRODUCT_SECTION_ID } from "./product-sections";
 
 const SPEC_LABEL_SUGGESTIONS: Record<ProductSpecGroup, string[]> = {
   DETALLES: ["Tipo de producto", "Uso recomendado", "Superficies", "Aroma", "Registro sanitario (INVIMA)", "País de origen", "Fabricante"],
@@ -44,15 +47,18 @@ export function HighlightsSection({ value, onUpdate }: PageContentProps): React.
   }
 
   return (
-    <Card
-      id="producto-sobre"
+    <EditorSection
+      id={PRODUCT_SECTION_ID.highlights}
+      icon={ListChecks}
       title="Sobre este artículo"
+      description="Viñetas cortas con los beneficios clave. Se muestran en la columna central de la ficha, en este orden."
       actions={
         <div className="flex items-center gap-3">
           <LimitCounter current={value.highlights.length} max={limit} />
           <Button
             type="button"
             variant="secondary"
+            size="sm"
             disabled={value.highlights.length >= limit}
             onClick={() =>
               onUpdate((current) =>
@@ -60,51 +66,59 @@ export function HighlightsSection({ value, onUpdate }: PageContentProps): React.
               )
             }
           >
-            <IconPlus size={15} />
+            <Plus size={16} aria-hidden="true" />
             Viñeta
           </Button>
         </div>
       }
     >
-      <div className="space-y-2">
+      <div className="space-y-4">
         {value.highlights.length === 0 && (
-          <p className="rounded-xl border border-dashed border-stone-300 px-4 py-6 text-center text-sm text-stone-400">
-            Sin viñetas. Resume en frases cortas los beneficios clave: para qué sirve, rendimiento, aroma, superficies…
-          </p>
+          <EmptyRows icon={ListChecks}>Sin viñetas. Resume en frases cortas los beneficios clave: para qué sirve, rendimiento, aroma, superficies…</EmptyRows>
         )}
-        <ol className="space-y-2">
-          {value.highlights.map((highlight, index) => (
-            <li key={highlight.key} className="flex items-start gap-2">
-              <span className="mt-2 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700" aria-hidden>
-                {index + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <textarea
-                  rows={2}
-                  value={highlight.text}
-                  maxLength={maxLength}
-                  onChange={(event) => patchHighlight(highlight.key, { text: event.target.value })}
-                  aria-label={`Viñeta ${index + 1}`}
-                  placeholder="Ej.: Elimina el 99,9 % de gérmenes y bacterias sin dejar residuos."
-                  className={inputClass}
+        {value.highlights.length > 0 && (
+          <ol className="space-y-3">
+            {value.highlights.map((highlight, index) => (
+              <li key={highlight.key} className="flex items-start gap-3">
+                <span
+                  className="mt-2.5 inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 font-mono text-xs font-semibold text-brand-700"
+                  aria-hidden="true"
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <textarea
+                    rows={2}
+                    value={highlight.text}
+                    maxLength={maxLength}
+                    onChange={(event) => patchHighlight(highlight.key, { text: event.target.value })}
+                    aria-label={`Viñeta ${index + 1}`}
+                    placeholder="Ej.: Elimina el 99,9 % de gérmenes y bacterias sin dejar residuos."
+                    className={textareaClass}
+                  />
+                  <p
+                    className={cn(
+                      "mt-1 text-right font-mono text-[0.7rem] tabular-nums text-ink-500",
+                      highlight.text.length >= maxLength && "text-warning-700"
+                    )}
+                  >
+                    {highlight.text.length}/{maxLength}
+                  </p>
+                </div>
+                <RowControls
+                  label={`la viñeta ${index + 1}`}
+                  isFirst={index === 0}
+                  isLast={index === value.highlights.length - 1}
+                  onMove={(offset) => onUpdate((current) => ({ ...current, highlights: moveByKey(current.highlights, highlight.key, offset) }))}
+                  onRemove={() => onUpdate((current) => ({ ...current, highlights: removeByKey(current.highlights, highlight.key) }))}
                 />
-                <p className={`mt-0.5 text-right text-[11px] ${highlight.text.length >= maxLength ? "text-amber-700" : "text-stone-400"}`}>
-                  {highlight.text.length}/{maxLength}
-                </p>
-              </div>
-              <RowControls
-                label={`la viñeta ${index + 1}`}
-                isFirst={index === 0}
-                isLast={index === value.highlights.length - 1}
-                onMove={(offset) => onUpdate((current) => ({ ...current, highlights: moveByKey(current.highlights, highlight.key, offset) }))}
-                onRemove={() => onUpdate((current) => ({ ...current, highlights: removeByKey(current.highlights, highlight.key) }))}
-              />
-            </li>
-          ))}
-        </ol>
-        <p className="text-xs text-stone-400">Se muestran en la columna central de la ficha, en este mismo orden. Las viñetas vacías no se guardan.</p>
+              </li>
+            ))}
+          </ol>
+        )}
+        <EditorNote>Las viñetas vacías no se guardan. El título de esta sección se cambia en «Títulos de sección».</EditorNote>
       </div>
-    </Card>
+    </EditorSection>
   );
 }
 
@@ -125,86 +139,94 @@ export function SpecsSection({ value, onUpdate }: PageContentProps): React.React
   }
 
   return (
-    <Card id="producto-especificaciones" title="Especificaciones" actions={<LimitCounter current={value.specs.length} max={limit} />}>
+    <EditorSection
+      id={PRODUCT_SECTION_ID.specs}
+      icon={ClipboardList}
+      title="Especificaciones"
+      description="Cada grupo es un acordeón de «Información del producto». Marca «Tabla principal» para repetir el dato junto al precio."
+      actions={<LimitCounter current={value.specs.length} max={limit} />}
+    >
       <div className="space-y-4">
-        <p className="text-sm text-stone-500">
-          Cada grupo es un acordeón de «Información del producto». Marca «Mostrar en la tabla principal» para que el dato aparezca también en la tabla de
-          atributos junto al precio (la marca, las dimensiones y el peso se agregan solos).
-        </p>
         {PRODUCT_SPEC_GROUPS.map((group) => {
           const rows = value.specs.filter((spec) => spec.group === group);
           const datalistId = `spec-sugerencias-${group.toLowerCase()}`;
           return (
-            <fieldset key={group} className="rounded-xl border border-stone-200 p-4">
-              <legend className="px-1 text-sm font-semibold text-navy-900">{PRODUCT_SPEC_GROUP_LABELS[group]}</legend>
+            <fieldset key={group} className="min-w-0 rounded-2xl border border-ink-200 p-4">
+              <legend className="px-1 text-sm font-bold text-brand-900">{PRODUCT_SPEC_GROUP_LABELS[group]}</legend>
               <datalist id={datalistId}>
                 {SPEC_LABEL_SUGGESTIONS[group].map((suggestion) => (
                   <option key={suggestion} value={suggestion} />
                 ))}
               </datalist>
-              <div className="space-y-2">
-                {rows.map((spec, index) => {
-                  const rowLabel = spec.label.trim() || `la fila ${index + 1} de ${PRODUCT_SPEC_GROUP_LABELS[group]}`;
-                  return (
-                    <div key={spec.key} className="grid gap-2 rounded-lg bg-stone-50 p-2 md:grid-cols-[minmax(0,13rem)_minmax(0,1fr)_auto_auto] md:items-center">
-                      <input
-                        list={datalistId}
-                        value={spec.label}
-                        maxLength={PRODUCT_CONTENT_LIMITS.specLabelLength}
-                        placeholder="Etiqueta"
-                        onChange={(event) => patchSpec(spec.key, { label: event.target.value })}
-                        aria-label={`Etiqueta de ${rowLabel}`}
-                        className={`${inputClass} bg-white`}
-                      />
-                      <input
-                        value={spec.value}
-                        maxLength={PRODUCT_CONTENT_LIMITS.specValueLength}
-                        placeholder="Valor"
-                        onChange={(event) => patchSpec(spec.key, { value: event.target.value })}
-                        aria-label={`Valor de ${rowLabel}`}
-                        className={`${inputClass} bg-white`}
-                      />
-                      <label className="flex items-center gap-2 whitespace-nowrap text-xs text-stone-600">
+              {rows.length > 0 && (
+                <div className="space-y-2">
+                  {rows.map((spec, index) => {
+                    const rowLabel = spec.label.trim() || `la fila ${index + 1} de ${PRODUCT_SPEC_GROUP_LABELS[group]}`;
+                    return (
+                      <div
+                        key={spec.key}
+                        className="grid gap-2 rounded-xl bg-ink-50 p-2 md:grid-cols-[minmax(0,13rem)_minmax(0,1fr)_auto_auto] md:items-center"
+                      >
                         <input
-                          type="checkbox"
-                          checked={spec.isKey}
-                          onChange={(event) => patchSpec(spec.key, { isKey: event.target.checked })}
-                          className="h-4 w-4 accent-brand-600"
+                          list={datalistId}
+                          value={spec.label}
+                          maxLength={PRODUCT_CONTENT_LIMITS.specLabelLength}
+                          placeholder="Etiqueta"
+                          onChange={(event) => patchSpec(spec.key, { label: event.target.value })}
+                          aria-label={`Etiqueta de ${rowLabel}`}
+                          className={inputClass}
                         />
-                        Mostrar en la tabla principal
-                      </label>
-                      <RowControls
-                        label={rowLabel}
-                        isFirst={index === 0}
-                        isLast={index === rows.length - 1}
-                        onMove={(offset) => onUpdate((current) => ({ ...current, specs: moveSpecWithinGroup(current.specs, spec.key, offset) }))}
-                        onRemove={() => onUpdate((current) => ({ ...current, specs: removeByKey(current.specs, spec.key) }))}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-              <button
-                type="button"
-                disabled={limitReached}
-                onClick={() => addSpec(group)}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-40"
-              >
-                <IconPlus size={14} />
+                        <input
+                          value={spec.value}
+                          maxLength={PRODUCT_CONTENT_LIMITS.specValueLength}
+                          placeholder="Valor"
+                          onChange={(event) => patchSpec(spec.key, { value: event.target.value })}
+                          aria-label={`Valor de ${rowLabel}`}
+                          className={inputClass}
+                        />
+                        <label className="flex items-center gap-2 px-1 text-xs font-medium whitespace-nowrap text-ink-700">
+                          <input
+                            type="checkbox"
+                            checked={spec.isKey}
+                            onChange={(event) => patchSpec(spec.key, { isKey: event.target.checked })}
+                            className="size-4 accent-brand-700"
+                          />
+                          Tabla principal
+                        </label>
+                        <RowControls
+                          label={rowLabel}
+                          isFirst={index === 0}
+                          isLast={index === rows.length - 1}
+                          onMove={(offset) => onUpdate((current) => ({ ...current, specs: moveSpecWithinGroup(current.specs, spec.key, offset) }))}
+                          onRemove={() => onUpdate((current) => ({ ...current, specs: removeByKey(current.specs, spec.key) }))}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <Button type="button" variant="ghost" size="sm" disabled={limitReached} onClick={() => addSpec(group)} className="mt-2 whitespace-normal">
+                <Plus size={16} aria-hidden="true" />
                 Agregar en «{PRODUCT_SPEC_GROUP_LABELS[group]}»
-              </button>
+              </Button>
             </fieldset>
           );
         })}
+        <EditorNote>La marca, las dimensiones y el peso se agregan solos a la tabla principal.</EditorNote>
       </div>
-    </Card>
+    </EditorSection>
   );
 }
 
 export function WarrantySection({ value, onUpdate }: PageContentProps): React.ReactNode {
   const set = fieldSetter(onUpdate);
   return (
-    <Card id="producto-garantia" title="Garantía">
+    <EditorSection
+      id={PRODUCT_SECTION_ID.warranty}
+      icon={ShieldCheck}
+      title="Garantía"
+      description="Se muestra en «Garantía y asistencia» de la ficha. Déjalo vacío si el producto no tiene garantía propia."
+    >
       <Field label="Garantía y asistencia del producto">
         <textarea
           rows={4}
@@ -212,26 +234,26 @@ export function WarrantySection({ value, onUpdate }: PageContentProps): React.Re
           maxLength={PRODUCT_CONTENT_LIMITS.warrantyLength}
           onChange={(event) => set("warrantyText", event.target.value)}
           placeholder="Ej.: Garantía de calidad de 6 meses desde la compra. Si el producto llega en mal estado, escríbenos por WhatsApp con la foto del empaque."
-          className={inputClass}
+          className={textareaClass}
         />
       </Field>
-      <p className="mt-2 text-xs text-stone-400">Se muestra en «Garantía y asistencia» de la ficha. Déjalo vacío si el producto no tiene garantía propia.</p>
-    </Card>
+    </EditorSection>
   );
 }
 
 export function VisualContentSection({ value, onUpdate }: PageContentProps): React.ReactNode {
   return (
-    <Card id="producto-contenido-visual" title="Contenido visual (Descripción del producto)">
-      <p className="mb-4 text-sm text-stone-500">
-        Bloques con imágenes diseñadas que se muestran en «Descripción del producto». Los bloques de la marca (se editan en Marcas) aparecen después de
-        estos, como contenido «Desde la marca».
-      </p>
+    <EditorSection
+      id={PRODUCT_SECTION_ID.visualContent}
+      icon={LayoutTemplate}
+      title="Contenido visual"
+      description="Bloques con imágenes diseñadas que van en «Descripción del producto». Los de la marca (se editan en Marcas) aparecen después, en «Desde la marca»."
+    >
       <ContentBlocksEditor
         blocks={value.contentBlocks}
         onUpdate={(update) => onUpdate((current) => ({ ...current, contentBlocks: update(current.contentBlocks) }))}
         emptyMessage="Sin bloques. Agrega imágenes de beneficios, modo de uso o comparativas para enriquecer la ficha."
       />
-    </Card>
+    </EditorSection>
   );
 }

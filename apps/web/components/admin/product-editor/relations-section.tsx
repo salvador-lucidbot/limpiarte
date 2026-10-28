@@ -5,11 +5,13 @@ import { useEffect, useState } from "react";
 import { useAdminGet } from "../../../lib/admin/use-admin-api";
 import { PRODUCT_CONTENT_LIMITS, PRODUCT_RELATION_TYPE_LABELS } from "../../../lib/api/types";
 import type { Paginated, ProductRelationType, ProductStatus } from "../../../lib/api/types";
-import { IconExternalLink, IconImage, IconPlus, IconSearch, IconX } from "../../icons";
+import { ExternalLink, ImageIcon, Link2, Plus, Search, X } from "lucide-react";
 import { Loader } from "../../loader";
 import { createLocalKey, patchByKey, removeByKey } from "../list-editing";
 import { LimitCounter } from "../row-controls";
-import { Badge, Card, inputClass } from "../ui";
+import { Badge, Select, inputClass } from "../ui";
+import { EditorSection, EmptyRows } from "./editor-section";
+import { PRODUCT_SECTION_ID } from "./product-sections";
 import type { ProductFormRelation, ProductFormUpdater, ProductFormValue } from "./product-form-model";
 
 const RELATION_TYPES: ProductRelationType[] = ["RELATED", "COMPLEMENTARY", "CROSS_SELL"];
@@ -40,12 +42,12 @@ function relationTypeOf(raw: string): ProductRelationType | undefined {
 function Thumbnail({ url }: { url: string | null }): React.ReactNode {
   if (!url) {
     return (
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-300">
-        <IconImage size={16} />
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ink-200 bg-ink-50 text-ink-400">
+        <ImageIcon size={16} aria-hidden="true" />
       </span>
     );
   }
-  return <img src={url} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-stone-200 bg-white object-contain" />;
+  return <img src={url} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-ink-200 bg-white object-contain" />;
 }
 
 function relationWarning(relation: ProductFormRelation): string | null {
@@ -108,18 +110,20 @@ export function RelationsSection({ value, onUpdate, productId }: RelationsSectio
   }
 
   return (
-    <Card id="producto-relacionados" title="Productos relacionados" actions={<LimitCounter current={value.relations.length} max={limit} />}>
+    <EditorSection
+      id={PRODUCT_SECTION_ID.relations}
+      icon={Link2}
+      title="Productos relacionados"
+      description="Alimentan «Productos relacionados con este artículo» y las sugerencias del carrito. Sin elegir ninguno, la ficha usa productos de la misma categoría."
+      actions={<LimitCounter current={value.relations.length} max={limit} />}
+    >
       <div className="space-y-4">
-        <p className="text-sm text-stone-500">
-          Alimentan «Productos relacionados con este artículo» y las sugerencias del carrito. Si no eliges ninguno, la ficha completa el carrusel con productos
-          de la misma categoría.
-        </p>
 
-        <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
+        <div className="rounded-2xl border border-ink-200 bg-ink-50 p-3">
           <div className="flex flex-col gap-2 sm:flex-row">
             <label className="relative flex-1">
               <span className="sr-only">Buscar productos para relacionar</span>
-              <IconSearch size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+              <Search size={16} aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-500" />
               <input
                 type="search"
                 value={search}
@@ -132,40 +136,39 @@ export function RelationsSection({ value, onUpdate, productId }: RelationsSectio
                 className={`${inputClass} bg-white pl-9`}
               />
             </label>
-            <label className="flex items-center gap-2 text-sm text-stone-600">
+            <label className="flex items-center gap-2 text-sm text-ink-600">
               <span className="whitespace-nowrap">Agregar como</span>
-              <select
+              <Select
                 value={newType}
                 onChange={(event) => {
                   const type = relationTypeOf(event.target.value);
                   if (type) setNewType(type);
                 }}
-                className={`${inputClass} bg-white`}
               >
                 {RELATION_TYPES.map((type) => (
                   <option key={type} value={type}>
                     {PRODUCT_RELATION_TYPE_LABELS[type]}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           </div>
 
           {searchPath && (
             <div className="mt-3" aria-live="polite">
               {loading && !results && <Loader size="sm" label="Buscando productos" />}
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              {results && visibleResults.length === 0 && <p className="py-2 text-sm text-stone-400">Sin resultados para «{debouncedSearch}».</p>}
+              {error && <p className="text-sm text-danger-700">{error}</p>}
+              {results && visibleResults.length === 0 && <p className="py-2 text-sm text-ink-500">Sin resultados para «{debouncedSearch}».</p>}
               {visibleResults.length > 0 && (
-                <ul className="divide-y divide-stone-200 overflow-hidden rounded-lg border border-stone-200 bg-white">
+                <ul className="divide-y divide-ink-200 overflow-hidden rounded-xl border border-ink-200 bg-white">
                   {visibleResults.map((product) => {
                     const linked = isLinked(product.id, newType);
                     return (
                       <li key={product.id} className="flex items-center gap-3 px-3 py-2">
                         <Thumbnail url={product.images[0]?.url ?? null} />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-navy-900">{product.name}</p>
-                          <p className="truncate text-xs text-stone-400">{product.sku ?? product.slug}</p>
+                          <p className="truncate text-sm font-semibold text-brand-900">{product.name}</p>
+                          <p className="truncate text-xs text-ink-500">{product.sku ?? product.slug}</p>
                         </div>
                         {product.status !== "ACTIVE" && <Badge tone="warning">{STATUS_LABELS[product.status]}</Badge>}
                         <button
@@ -175,10 +178,10 @@ export function RelationsSection({ value, onUpdate, productId }: RelationsSectio
                             if (linked || limitReached) return;
                             addRelation(product);
                           }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-brand-200 px-2.5 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-50 aria-disabled:cursor-default aria-disabled:border-stone-200 aria-disabled:text-stone-500 aria-disabled:hover:bg-transparent"
+                          className="inline-flex items-center gap-1 rounded-lg border border-brand-200 px-2.5 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 aria-disabled:cursor-default aria-disabled:border-ink-200 aria-disabled:text-ink-500 aria-disabled:hover:bg-transparent"
                           aria-label={linked ? `${product.name} ya está agregado` : `Agregar ${product.name} como ${PRODUCT_RELATION_TYPE_LABELS[newType]}`}
                         >
-                          {!linked && <IconPlus size={13} />}
+                          {!linked && <Plus size={13} aria-hidden="true" />}
                           {linked ? "Agregado" : "Agregar"}
                         </button>
                       </li>
@@ -189,12 +192,12 @@ export function RelationsSection({ value, onUpdate, productId }: RelationsSectio
             </div>
           )}
           {!searchPath && search.trim().length > 0 && (
-            <p className="mt-2 text-xs text-stone-400">Escribe al menos {SEARCH_MIN_LENGTH} caracteres.</p>
+            <p className="mt-2 text-xs text-ink-500">Escribe al menos {SEARCH_MIN_LENGTH} caracteres.</p>
           )}
         </div>
 
         {value.relations.length === 0 && (
-          <p className="rounded-xl border border-dashed border-stone-300 px-4 py-6 text-center text-sm text-stone-400">Sin productos relacionados.</p>
+          <EmptyRows icon={Link2}>Sin productos relacionados.</EmptyRows>
         )}
 
         {value.relations.length > 0 && (
@@ -202,18 +205,18 @@ export function RelationsSection({ value, onUpdate, productId }: RelationsSectio
             {value.relations.map((relation) => {
               const warning = relationWarning(relation);
               return (
-                <li key={relation.key} className="flex flex-wrap items-center gap-3 rounded-xl border border-stone-200 px-3 py-2 sm:flex-nowrap">
+                <li key={relation.key} className="flex flex-wrap items-center gap-3 rounded-2xl border border-ink-200 px-3 py-2.5 sm:flex-nowrap">
                   <Thumbnail url={relation.imageUrl} />
                   <div className="min-w-0 flex-1">
                     <Link
                       href={`/admin/productos/${relation.relatedProductId}`}
                       target="_blank"
-                      className="inline-flex max-w-full items-center gap-1 truncate text-sm font-medium text-navy-900 hover:text-brand-700"
+                      className="inline-flex max-w-full items-center gap-1 truncate text-sm font-semibold text-brand-900 hover:text-brand-700"
                     >
                       <span className="truncate">{relation.name}</span>
-                      <IconExternalLink size={12} className="shrink-0" />
+                      <ExternalLink size={12} aria-hidden="true" className="shrink-0" />
                     </Link>
-                    <p className="truncate text-xs text-stone-400">{relation.sku ?? "Sin SKU"}</p>
+                    <p className="truncate text-xs text-ink-500">{relation.sku ?? "Sin SKU"}</p>
                   </div>
                   {warning && <Badge tone={relation.deleted ? "danger" : "warning"}>{warning}</Badge>}
                   <select
@@ -232,9 +235,9 @@ export function RelationsSection({ value, onUpdate, productId }: RelationsSectio
                     type="button"
                     onClick={() => onUpdate((current) => ({ ...current, relations: removeByKey(current.relations, relation.key) }))}
                     aria-label={`Quitar ${relation.name} de los relacionados`}
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-stone-500 hover:bg-red-50 hover:text-red-600"
+                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-500 hover:bg-danger-50 hover:text-danger-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
                   >
-                    <IconX size={15} />
+                    <X size={15} aria-hidden="true" />
                   </button>
                 </li>
               );
@@ -242,6 +245,6 @@ export function RelationsSection({ value, onUpdate, productId }: RelationsSectio
           </ul>
         )}
       </div>
-    </Card>
+    </EditorSection>
   );
 }

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { IconChevronDown, IconX } from "../icons";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import type { MoveOffset } from "./list-editing";
 
 const ICON_BUTTON_CLASS =
-  "inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-500 transition hover:bg-stone-100 hover:text-navy-900 aria-disabled:cursor-default aria-disabled:opacity-30 aria-disabled:hover:bg-transparent aria-disabled:hover:text-stone-500";
+  "inline-flex size-8 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-brand-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 aria-disabled:cursor-default aria-disabled:opacity-30 aria-disabled:hover:bg-transparent aria-disabled:hover:text-ink-500";
 
 interface MoveRecord {
   offset: MoveOffset;
@@ -47,19 +47,19 @@ export function RowControls({ label, isFirst, isLast, onMove, onRemove }: RowCon
         title="Subir"
         className={ICON_BUTTON_CLASS}
       >
-        <IconChevronDown size={15} className="rotate-180" />
+        <ChevronUp size={16} aria-hidden="true" />
       </button>
       <button type="button" aria-disabled={isLast} onClick={() => move(1)} aria-label={`Bajar ${label}`} title="Bajar" className={ICON_BUTTON_CLASS}>
-        <IconChevronDown size={15} />
+        <ChevronDown size={16} aria-hidden="true" />
       </button>
       <button
         type="button"
         onClick={onRemove}
         aria-label={`Quitar ${label}`}
         title="Quitar"
-        className={`${ICON_BUTTON_CLASS} hover:bg-red-50 hover:text-red-600`}
+        className={`${ICON_BUTTON_CLASS} hover:bg-danger-50 hover:text-danger-700`}
       >
-        <IconX size={15} />
+        <X size={16} aria-hidden="true" />
       </button>
       <span className="sr-only" aria-live="polite">
         {lastMove ? moveMessage(label, lastMove, isFirst, isLast) : ""}
@@ -70,7 +70,7 @@ export function RowControls({ label, isFirst, isLast, onMove, onRemove }: RowCon
 
 export function LimitCounter({ current, max }: { current: number; max: number }): React.ReactNode {
   return (
-    <span className={`text-xs font-medium ${current >= max ? "text-amber-700" : "text-stone-400"}`}>
+    <span className={`font-mono text-xs font-medium tabular-nums ${current >= max ? "text-warning-700" : "text-ink-500"}`}>
       {current} de {max}
     </span>
   );

@@ -2,17 +2,20 @@
 
 import { useState } from "react";
 import { PRODUCT_CONTENT_LIMITS } from "../../../lib/api/types";
-import { IconPlus, IconRefresh, IconX } from "../../icons";
+import { Layers, Plus, RefreshCw, X } from "lucide-react";
 import { ImageUploadButton } from "../image-upload";
 import { createLocalKey, moveByKey, patchByKey, removeByKey } from "../list-editing";
 import { RowControls } from "../row-controls";
-import { Badge, Button, Card, Field, inputClass } from "../ui";
+import { Badge, Button, Field, inputClass } from "../ui";
+import { EditorCallout, EditorNote, EditorSection, EmptyRows } from "./editor-section";
+import { PRODUCT_SECTION_ID } from "./product-sections";
 import { HEX_COLOR_PATTERN } from "./product-form-model";
 import type { ProductFormImage, ProductFormOption, ProductFormOptionValue, ProductFormUpdater, ProductFormValue, ProductFormVariant } from "./product-form-model";
 import { activeOptionsOf, combinationCount, reconcileVariants, variantLabel } from "./variant-combinations";
 
-const COMPACT_INPUT = "w-full rounded-lg border border-stone-300 px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-200";
-const SMALL_ICON_BUTTON = "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-red-600";
+const COMPACT_INPUT =
+  "w-full rounded-lg border border-ink-200 bg-white px-2.5 py-1.5 text-sm text-ink-900 shadow-xs focus:border-brand-400 focus:ring-4 focus:ring-brand-100 focus:outline-none";
+const SMALL_ICON_BUTTON = "inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-500 hover:bg-danger-50 hover:text-danger-700";
 
 interface VariantsSectionProps {
   value: ProductFormValue;
@@ -46,7 +49,7 @@ function SwatchColorField({ hex, label, onChange }: { hex: string; label: string
         value={validHex ? hex : "#ffffff"}
         onChange={(event) => onChange(event.target.value)}
         aria-label={`Color de muestra de ${label}`}
-        className="h-9 w-9 shrink-0 cursor-pointer rounded-lg border border-stone-300 bg-white p-1"
+        className="h-9 w-9 shrink-0 cursor-pointer rounded-lg border border-ink-300 bg-white p-1"
       />
       <input
         value={hex}
@@ -55,11 +58,11 @@ function SwatchColorField({ hex, label, onChange }: { hex: string; label: string
         onChange={(event) => onChange(event.target.value.trim())}
         aria-label={`Código de color de ${label}`}
         aria-invalid={hex !== "" && !validHex}
-        className={`${COMPACT_INPUT} w-24 font-mono aria-[invalid=true]:border-red-400`}
+        className={`${COMPACT_INPUT} w-24 font-mono aria-[invalid=true]:border-danger-500`}
       />
       {hex !== "" && (
         <button type="button" onClick={() => onChange("")} aria-label={`Quitar el color de ${label}`} className={SMALL_ICON_BUTTON}>
-          <IconX size={14} />
+          <X size={14} aria-hidden="true" />
         </button>
       )}
     </div>
@@ -81,9 +84,9 @@ function SwatchImageField({
   return (
     <div className="flex items-start gap-1">
       {url ? (
-        <img src={url} alt="" className="h-9 w-9 shrink-0 rounded-lg border border-stone-200 bg-white object-cover" />
+        <img src={url} alt="" className="h-9 w-9 shrink-0 rounded-lg border border-ink-200 bg-white object-cover" />
       ) : (
-        <span className="h-9 w-9 shrink-0 rounded-lg border border-dashed border-stone-300" aria-hidden />
+        <span className="h-9 w-9 shrink-0 rounded-lg border border-dashed border-ink-300" aria-hidden />
       )}
       <select value={url} onChange={(event) => onChange(event.target.value)} aria-label={`Miniatura de ${label}`} className={`${COMPACT_INPUT} w-40`}>
         <option value="">Sin miniatura</option>
@@ -135,12 +138,12 @@ function AddValueInput({ optionLabel, onAdd }: { optionLabel: string; onAdd: (te
           className={inputClass}
         />
         <Button type="button" variant="secondary" onClick={submit} disabled={text.trim() === ""}>
-          <IconPlus size={15} />
+          <Plus size={16} aria-hidden="true" />
           Agregar
         </Button>
       </div>
       {error && (
-        <p role="alert" className="mt-1 text-xs text-amber-700">
+        <p role="alert" className="mt-1 text-xs text-warning-700">
           {error}
         </p>
       )}
@@ -154,10 +157,10 @@ function VariantSwatches({ options, variant }: { options: ProductFormOption[]; v
     <span className="flex shrink-0 -space-x-1" aria-hidden>
       {values.map((value) => {
         if (value.swatchImageUrl) {
-          return <img key={value.key} src={value.swatchImageUrl} alt="" className="h-5 w-5 rounded-full border border-white object-cover ring-1 ring-stone-200" />;
+          return <img key={value.key} src={value.swatchImageUrl} alt="" className="h-5 w-5 rounded-full border border-white object-cover ring-1 ring-ink-200" />;
         }
         if (HEX_COLOR_PATTERN.test(value.swatchHex)) {
-          return <span key={value.key} className="h-5 w-5 rounded-full border border-white ring-1 ring-stone-200" style={{ backgroundColor: value.swatchHex }} />;
+          return <span key={value.key} className="h-5 w-5 rounded-full border border-white ring-1 ring-ink-200" style={{ backgroundColor: value.swatchHex }} />;
         }
         return null;
       })}
@@ -227,28 +230,32 @@ export function VariantsSection({ value, onUpdate }: VariantsSectionProps): Reac
   }
 
   return (
-    <Card
-      id="producto-variantes"
-      title="Variantes (presentación, tamaño, aroma, color…)"
+    <EditorSection
+      id={PRODUCT_SECTION_ID.variants}
+      icon={Layers}
+      title="Variantes"
+      description="Presentaciones, tamaños, aromas o colores. Cada combinación tiene su SKU, precio, stock e imagen."
       actions={
         <div className="flex flex-wrap items-center gap-2">
           {value.options.length > 0 && (
             <Button
               type="button"
               variant="ghost"
+              size="sm"
               onClick={() => onUpdate((current) => ({ ...current, variants: reconcileVariants(current.options, current.variants) }))}
             >
-              <IconRefresh size={15} />
+              <RefreshCw size={16} aria-hidden="true" />
               Regenerar combinaciones
             </Button>
           )}
           <Button
             type="button"
             variant="secondary"
+            size="sm"
             disabled={optionLimitReached}
             onClick={() => updateOptions((options) => [...options, { key: createLocalKey(), name: "", values: [] }], false)}
           >
-            <IconPlus size={15} />
+            <Plus size={16} aria-hidden="true" />
             Opción
           </Button>
         </div>
@@ -256,16 +263,16 @@ export function VariantsSection({ value, onUpdate }: VariantsSectionProps): Reac
     >
       <div className="space-y-4">
         {value.options.length === 0 && (
-          <p className="rounded-xl border border-dashed border-stone-300 px-4 py-6 text-center text-sm text-stone-400">
+          <EmptyRows icon={Layers}>
             Sin variantes: el producto se vende con el precio y las existencias generales. Agrega una opción (máximo {PRODUCT_CONTENT_LIMITS.options}) para
             venderlo en varias presentaciones.
-          </p>
+          </EmptyRows>
         )}
 
         {value.options.map((option, optionIndex) => {
           const optionLabel = option.name.trim() || `la opción ${optionIndex + 1}`;
           return (
-            <fieldset key={option.key} className="rounded-xl border border-stone-200 p-4">
+            <fieldset key={option.key} className="min-w-0 rounded-2xl border border-ink-200 p-4">
               <legend className="sr-only">Opción {optionIndex + 1}</legend>
               <div className="flex items-end gap-2">
                 <div className="flex-1">
@@ -291,7 +298,7 @@ export function VariantsSection({ value, onUpdate }: VariantsSectionProps): Reac
                 {option.values.map((entry, valueIndex) => {
                   const valueLabel = entry.value.trim() || `el valor ${valueIndex + 1}`;
                   return (
-                    <li key={entry.key} className="flex flex-wrap items-start gap-2 rounded-lg bg-stone-50 p-2">
+                    <li key={entry.key} className="flex flex-wrap items-start gap-2 rounded-xl bg-ink-50 p-2">
                       <input
                         value={entry.value}
                         onChange={(event) =>
@@ -326,32 +333,34 @@ export function VariantsSection({ value, onUpdate }: VariantsSectionProps): Reac
               <div className="mt-3">
                 <AddValueInput optionLabel={optionLabel} onAdd={(texts) => addValues(option, texts)} />
               </div>
-              <p className="mt-2 text-xs text-stone-400">
+              <EditorNote className="mt-2">
                 La muestra (miniatura o color) se ve en el selector de variantes de la ficha. Puedes elegir una imagen de la galería o subir una propia.
-              </p>
+              </EditorNote>
             </fieldset>
           );
         })}
 
         {combos > PRODUCT_CONTENT_LIMITS.variants && (
-          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            Estas opciones generan {combos} combinaciones y el máximo es {PRODUCT_CONTENT_LIMITS.variants}. Quita valores para poder guardar.
-          </p>
+          <div role="alert">
+            <EditorCallout tone="danger">
+              Estas opciones generan {combos} combinaciones y el máximo es {PRODUCT_CONTENT_LIMITS.variants}. Quita valores para poder guardar.
+            </EditorCallout>
+          </div>
         )}
 
         {value.variants.length > 0 && (
           <div className="space-y-3">
             <div className="flex flex-wrap items-end justify-between gap-3">
-              <p className="text-sm text-stone-600">
-                <strong className="text-navy-900">{value.variants.length}</strong> combinaciones ·{" "}
-                <strong className="text-navy-900">{activeCount}</strong> activas · <strong className="text-navy-900">{totalStock}</strong> unidades
+              <p className="text-sm text-ink-600">
+                <strong className="text-brand-900">{value.variants.length}</strong> combinaciones ·{" "}
+                <strong className="text-brand-900">{activeCount}</strong> activas · <strong className="text-brand-900">{totalStock}</strong> unidades
               </p>
               <div className="flex flex-wrap items-end gap-2">
-                <label className="text-xs text-stone-500">
+                <label className="text-xs font-semibold text-ink-600">
                   Precio para todas
                   <input type="number" min={0} value={bulkPrice} onChange={(event) => setBulkPrice(event.target.value)} className={`${COMPACT_INPUT} mt-1 w-32`} />
                 </label>
-                <label className="text-xs text-stone-500">
+                <label className="text-xs font-semibold text-ink-600">
                   Stock para todas
                   <input type="number" min={0} value={bulkStock} onChange={(event) => setBulkStock(event.target.value)} className={`${COMPACT_INPUT} mt-1 w-28`} />
                 </label>
@@ -361,9 +370,9 @@ export function VariantsSection({ value, onUpdate }: VariantsSectionProps): Reac
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-stone-200">
+            <div className="scrollbar-thin relative overflow-x-auto rounded-2xl border border-ink-200">
               <table className="w-full min-w-[60rem] text-sm">
-                <thead className="bg-stone-50 text-left text-xs text-stone-500">
+                <thead className="bg-ink-50 text-left text-xs font-bold tracking-wide text-ink-600 uppercase">
                   <tr>
                     <th scope="col" className="px-3 py-2 font-medium">Combinación</th>
                     <th scope="col" className="px-2 py-2 font-medium">SKU</th>
@@ -380,8 +389,8 @@ export function VariantsSection({ value, onUpdate }: VariantsSectionProps): Reac
                     const label = variantLabel(value.options, variant);
                     const imageInGallery = gallery.some((choice) => choice.url === variant.imageUrl);
                     return (
-                      <tr key={variant.key} className={`border-t border-stone-100 ${variant.isActive ? "" : "bg-stone-50 text-stone-400"}`}>
-                        <th scope="row" className="px-3 py-2 text-left font-medium text-navy-900">
+                      <tr key={variant.key} className={`border-t border-ink-100 ${variant.isActive ? "" : "bg-ink-50 text-ink-500"}`}>
+                        <th scope="row" className="px-3 py-2 text-left font-semibold text-brand-900">
                           <span className="flex items-center gap-2">
                             <VariantSwatches options={value.options} variant={variant} />
                             <span className={variant.isActive ? "" : "line-through"}>{label}</span>
@@ -440,9 +449,9 @@ export function VariantsSection({ value, onUpdate }: VariantsSectionProps): Reac
                         <td className="px-2 py-2">
                           <span className="flex items-center gap-1.5">
                             {variant.imageUrl ? (
-                              <img src={variant.imageUrl} alt="" className="h-8 w-8 shrink-0 rounded-md border border-stone-200 bg-white object-cover" />
+                              <img src={variant.imageUrl} alt="" className="h-8 w-8 shrink-0 rounded-md border border-ink-200 bg-white object-cover" />
                             ) : (
-                              <span className="h-8 w-8 shrink-0 rounded-md border border-dashed border-stone-300" aria-hidden />
+                              <span className="h-8 w-8 shrink-0 rounded-md border border-dashed border-ink-300" aria-hidden />
                             )}
                             <select
                               value={variant.imageUrl}
@@ -466,7 +475,7 @@ export function VariantsSection({ value, onUpdate }: VariantsSectionProps): Reac
                             checked={variant.isActive}
                             onChange={(event) => patchVariant(variant.key, { isActive: event.target.checked })}
                             aria-label={`${label} activa`}
-                            className="h-4 w-4 accent-brand-600"
+                            className="size-4 accent-brand-700"
                           />
                         </td>
                       </tr>
@@ -479,13 +488,13 @@ export function VariantsSection({ value, onUpdate }: VariantsSectionProps): Reac
         )}
 
         {value.options.length > 0 && (
-          <p className="text-xs text-stone-400">
+          <EditorNote>
             Las combinaciones se crean solas al agregar o quitar valores y conservan su SKU, precios, stock e imagen. El stock que cambies se guarda como
             ajuste de inventario y respeta las ventas hechas mientras editas. Para dejar de vender una combinación desmarca «Activa»: así mantiene su
             historial de inventario, los carritos y las listas de precios. La imagen de cada variante se elige entre las de la galería.
-          </p>
+          </EditorNote>
         )}
       </div>
-    </Card>
+    </EditorSection>
   );
 }

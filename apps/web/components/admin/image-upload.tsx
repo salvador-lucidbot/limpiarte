@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useAdminUpload } from "../../lib/admin/use-admin-api";
-import { IconImage, IconUpload, IconX } from "../icons";
+import { ImageIcon, Upload, X } from "lucide-react";
 import { Button, inputClass } from "./ui";
 
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp,image/avif";
@@ -66,13 +66,11 @@ export function ImageUploadButton({ onUploaded, label = "Subir", multiple = fals
         onChange={(event) => void handleFiles(event.target.files)}
         className="hidden"
       />
-      <Button type="button" variant="secondary" disabled={uploading} onClick={() => inputRef.current?.click()}>
-        <span className="flex items-center gap-1.5">
-          <IconUpload size={15} />
-          {uploading ? "Subiendo…" : label}
-        </span>
+      <Button type="button" variant="secondary" loading={uploading} onClick={() => inputRef.current?.click()}>
+        <Upload size={16} aria-hidden="true" />
+        {uploading ? "Subiendo…" : label}
       </Button>
-      {error && <p className="mt-1 max-w-[14rem] text-xs text-red-600">{error}</p>}
+      {error && <p role="alert" className="mt-1 max-w-[14rem] text-xs text-danger-700 wrap-break-word">{error}</p>}
     </div>
   );
 }
@@ -88,15 +86,15 @@ interface ImageUrlFieldProps {
 export function ImageUrlField({ label, value, onChange, required = false, hint }: ImageUrlFieldProps): React.ReactNode {
   return (
     <div className="block">
-      <span className="mb-1 block text-sm font-medium text-stone-700">
+      <span className="mb-1.5 block text-sm font-semibold text-ink-800">
         {label}
-        {required && " *"}
+        {required && <span className="text-danger-600"> *</span>}
       </span>
-      <div className="flex items-start gap-2">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-stone-200 bg-stone-50 text-stone-300">
-          {value ? <img src={value} alt="" className="h-full w-full object-cover" /> : <IconImage size={18} />}
+      <div className="flex flex-wrap items-start gap-2 sm:flex-nowrap">
+        <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-ink-200 bg-ink-50 text-ink-400">
+          {value ? <img src={value} alt="" className="h-full w-full object-cover" /> : <ImageIcon size={18} aria-hidden="true" />}
         </span>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1 basis-48">
           <input
             required={required}
             value={value}
@@ -105,7 +103,7 @@ export function ImageUrlField({ label, value, onChange, required = false, hint }
             onChange={(event) => onChange(event.target.value)}
             className={inputClass}
           />
-          {hint && <p className="mt-1 text-xs text-stone-400">{hint}</p>}
+          {hint && <p className="mt-1.5 text-xs text-ink-500 wrap-break-word">{hint}</p>}
         </div>
         <ImageUploadButton
           onUploaded={(urls) => {
@@ -114,8 +112,8 @@ export function ImageUrlField({ label, value, onChange, required = false, hint }
           }}
         />
         {value && (
-          <Button type="button" variant="ghost" onClick={() => onChange("")} aria-label="Quitar imagen">
-            <IconX size={15} />
+          <Button type="button" variant="ghost" size="icon" onClick={() => onChange("")} aria-label={`Quitar ${label.toLocaleLowerCase("es")}`}>
+            <X size={16} aria-hidden="true" />
           </Button>
         )}
       </div>
