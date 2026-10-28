@@ -138,6 +138,16 @@ export function IconGift(props: IconProps): React.ReactNode {
   );
 }
 
+export function IconPlug(props: IconProps): React.ReactNode {
+  return (
+    <Icon {...props}>
+      <path d="M9 2.5v5M15 2.5v5" />
+      <path d="M6 7.5h12v3a6 6 0 0 1-6 6 6 6 0 0 1-6-6z" />
+      <path d="M12 16.5v5" />
+    </Icon>
+  );
+}
+
 export function IconShieldCheck(props: IconProps): React.ReactNode {
   return (
     <Icon {...props}>

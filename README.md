@@ -97,11 +97,14 @@ Monorepo pnpm con dos aplicaciones desacopladas: `apps/api` (REST API NestJS con
    - **Marcas** (`/admin/marcas`): logo, banner, lema, descripción, orden, estado y bloques de contenido «Desde la marca»; el borrado pide confirmación sostenida y se bloquea si la marca tiene productos.
    - **Subida de archivos propia**: cada campo de imagen acepta archivo o URL externa. Los archivos se guardan en el disco del API (`apps/api/uploads/`, servido en `/uploads` con soporte de rangos para video) con validación de formato y de magic bytes y nombres aleatorios: imágenes hasta 5 MB (`POST /admin/uploads`), PDF hasta 10 MB (`POST /admin/uploads/documents`, firma `%PDF-`) y MP4 hasta 50 MB (`POST /admin/uploads/videos`, caja `ftyp`, escrito en disco y no en memoria); en productos se pueden subir varias imágenes a la vez.
 
-6. **Usuarios, roles y permisos (`apps/api/src/modules/users/`, `roles/`, `common/guards/`)**:
+6. **Integraciones (`apps/api/src/modules/integrations/`, `/admin/integraciones`)**:
+   - Credenciales de Claude (Anthropic) y de Meta Ads administradas desde el panel, cifradas con AES-256-GCM en la base y nunca devueltas: la pantalla solo indica si existen. Cada una se puede activar, desactivar y probar contra el servicio real, y el resultado queda con fecha y mensaje de error.
+
+7. **Usuarios, roles y permisos (`apps/api/src/modules/users/`, `roles/`, `common/guards/`)**:
    - Login administrativo con contraseña + segundo factor por correo, bloqueo por intentos fallidos y cierre de sesión por expiración de JWT.
    - RBAC con 14 permisos y 6 roles sembrados (Administrador, Gestor de catálogo, Gestor de pedidos, Servicio al cliente, Marketing, Auditor), overrides por usuario, tope de 15 usuarios internos activos y Superadmin único.
 
-7. **Integración LucidBot (`apps/api/src/modules/lucidbot/`)**:
+8. **Integración LucidBot (`apps/api/src/modules/lucidbot/`)**:
    - Conexión asistida desde el Superadmin (URL de webhook + clave cifrada AES-256-GCM, prueba de conectividad, indicador de estado) sin intervención técnica.
    - 9 eventos activables individualmente (carrito abandonado con temporizador, pedido creado, pago aprobado/rechazado, cambios de estado, despacho, entrega, cliente registrado, solicitud de contacto), log histórico con reintentos automáticos cada 10 minutos.
 

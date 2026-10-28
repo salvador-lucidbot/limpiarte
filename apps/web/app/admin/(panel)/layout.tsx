@@ -14,6 +14,7 @@ import {
   IconImage,
   IconLogOut,
   IconPackage,
+  IconPlug,
   IconProps,
   IconSettings,
   IconShieldCheck,
@@ -49,6 +50,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/envios", label: "Envíos", icon: IconTruck, permission: "settings.manage" },
   { href: "/admin/usuarios", label: "Usuarios y roles", icon: IconShieldCheck, permission: "users.manage" },
   { href: "/admin/lucidbot", label: "LucidBot", icon: IconBot, permission: "integration.manage" },
+  { href: "/admin/integraciones", label: "Integraciones", icon: IconPlug, permission: "integration.manage" },
   { href: "/admin/configuracion", label: "Configuración", icon: IconSettings, permission: "settings.manage" },
   { href: "/admin/auditoria", label: "Auditoría", icon: IconFileText, permission: "audit.view" }
 ];

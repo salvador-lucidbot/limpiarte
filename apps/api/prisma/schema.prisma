@@ -887,6 +887,27 @@ model AuditLog {
   @@index([entity, createdAt])
 }
 
+enum IntegrationProvider {
+  ANTHROPIC
+  META_ADS
+}
+
+/// Credenciales de servicios externos administradas desde /admin/integraciones.
+/// El secreto va cifrado con AES-256-GCM y NUNCA se devuelve al panel: la API
+/// solo informa si existe. `config` guarda lo que no es secreto (cuenta publicitaria, modelo).
+model Integration {
+  id               String              @id @default(cuid())
+  provider         IntegrationProvider @unique
+  isActive         Boolean             @default(false)
+  status           ConnectionStatus    @default(INACTIVE)
+  secretEncrypted  String?             @db.Text
+  config           Json?
+  lastVerifiedAt   DateTime?
+  lastErrorMessage String?             @db.Text
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+}
+
 model LucidBotConnection {
   id                     String           @id @default(cuid())
   connectionKeyEncrypted String?
