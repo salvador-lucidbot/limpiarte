@@ -10,6 +10,7 @@ import { businessDayKey, estimateDelivery, formatPromoEnd } from "../../../../co
 import { layoutDescription } from "../../../../components/store/product/description-summary";
 import { KeyAttributesTable } from "../../../../components/store/product/key-attributes-table";
 import { ProductAboutItem } from "../../../../components/store/product/product-about-item";
+import { ProductBanner } from "../../../../components/store/product/product-banner";
 import { ProductBreadcrumbs } from "../../../../components/store/product/product-breadcrumbs";
 import { ProductBuyBox } from "../../../../components/store/product/product-buy-box";
 import type { StoreOfferInfo } from "../../../../components/store/product/product-buy-box";
@@ -23,6 +24,7 @@ import { ProductMediaGallery } from "../../../../components/store/product/produc
 import { ProductDocumentsSection, ProductVideosSection } from "../../../../components/store/product/product-media-sections";
 import { ProductPriceBlock } from "../../../../components/store/product/product-price-block";
 import { ProductSelectionProvider } from "../../../../components/store/product/product-selection-context";
+import { ProductUsageSection } from "../../../../components/store/product/product-usage-section";
 import type { PurchasableProduct } from "../../../../components/store/product/product-selection-context";
 import { ProductVariantSelector } from "../../../../components/store/product/product-variant-selector";
 import { RelatedProductCarousels } from "../../../../components/store/product/related-product-carousels";
@@ -52,6 +54,7 @@ function toPurchasable(product: ProductDetail): PurchasableProduct {
     lowStock: product.lowStock,
     allowBackorder: product.allowBackorder,
     weightKg: product.dimensions?.weightKg ?? null,
+    bundlePromo: product.bundlePromo,
     options: product.options,
     variants: product.variants
   };
@@ -121,6 +124,8 @@ export default async function ProductPage({ params }: { params: Params }): Promi
 
       <ProductBreadcrumbs categoryPath={product.categoryPath} productName={product.name} />
 
+      <ProductBanner banner={product.topBanner} placement="top" productName={product.name} />
+
       <ProductSelectionProvider product={toPurchasable(product)}>
         <div className="mt-3 grid grid-cols-1 gap-y-5 rounded-2xl border border-line bg-white p-4 shadow-sm sm:p-5 md:grid-cols-2 md:grid-rows-[auto_auto_auto_auto_1fr] md:gap-x-8 lg:p-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_18.5rem] xl:grid-rows-[auto_auto_auto_1fr] xl:gap-x-7">
           <div className="min-w-0 md:col-start-2 md:row-start-1">
@@ -185,6 +190,12 @@ export default async function ProductPage({ params }: { params: Params }): Promi
       </Suspense>
 
       <ProductContentSections blocks={product.contentBlocks} paragraphs={descriptionLayout.bodyParagraphs} brand={product.brand} />
+      <ProductUsageSection
+        media={product.usageMedia}
+        instructions={product.technicalSheet.usageInstructions}
+        productName={product.name}
+        fallbackPosterUrl={product.images[0]?.url ?? null}
+      />
       <ProductInformation columns={informationColumns} />
       <ProductVideosSection
         videos={product.videos}
@@ -210,6 +221,8 @@ export default async function ProductPage({ params }: { params: Params }): Promi
           storeName={extras.storeName}
         />
       </Suspense>
+
+      <ProductBanner banner={product.bottomBanner} placement="bottom" productName={product.name} />
     </div>
   );
 }

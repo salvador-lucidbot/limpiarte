@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useCart } from "../../lib/cart/cart-context";
 import { formatCOP } from "../../lib/format";
 import { IconCart, IconDroplets, IconPlus, IconX } from "../icons";
+import { CartBundleNote } from "./cart-bundle-note";
 import { FreeShippingBar } from "./free-shipping-bar";
 
 export function CartDrawer(): React.ReactNode {
@@ -76,6 +77,7 @@ export function CartDrawer(): React.ReactNode {
                     <div className="min-w-0 flex-1">
                       <p className="line-clamp-1 text-sm font-medium text-slate-700">{item.name}</p>
                       {item.variantLabel && <p className="text-xs text-slate-400">{item.variantLabel}</p>}
+                      <CartBundleNote bundle={item.bundle} compact />
                       {item.unavailable && <p className="text-xs font-semibold text-red-700">Ya no está disponible: quítalo del carrito.</p>}
                       <div className="mt-1.5 flex items-center justify-between">
                         <span className="flex items-center rounded-md border border-slate-200 text-sm">

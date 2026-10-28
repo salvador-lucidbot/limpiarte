@@ -97,7 +97,7 @@ export function buildInformationColumns(product: ProductDetail, guaranteeText: s
     ],
     MATERIALES_CUIDADO: [
       ...specRows(product.specs, "MATERIALES_CUIDADO"),
-      ...row("Modo de uso", sheet.usageInstructions),
+      ...row("Modo de uso", product.usageMedia ? null : sheet.usageInstructions),
       ...row("Precauciones", sheet.precautions)
     ],
     GARANTIA: [...specRows(product.specs, "GARANTIA"), ...row("Devoluciones", guaranteeText)]

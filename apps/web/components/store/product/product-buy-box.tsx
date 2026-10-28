@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { formatCOP } from "../../../lib/format";
-import { IconLock, IconMapPin, IconTruck } from "../../icons";
+import { bundleProgressLabel } from "../../../lib/pricing/bundle-promo";
+import { IconGift, IconLock, IconMapPin, IconTruck } from "../../icons";
 import { AddToCartButton } from "../add-to-cart-button";
 import { StockAlertForm } from "../stock-alert-form";
 import { AddToListButton } from "./add-to-list-button";
@@ -227,6 +228,16 @@ export function ProductBuyBox({ offer, deliveryEstimate, leadTimeMinDays, leadTi
               ))}
             </select>
           </div>
+
+          {product.bundlePromo && (
+            <p
+              className="flex items-start gap-2 rounded-xl bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-800 ring-1 ring-brand-200"
+              aria-live="polite"
+            >
+              <IconGift size={16} className="mt-0.5 shrink-0" />
+              <span className="min-w-0">{bundleProgressLabel(product.bundlePromo, effectiveQuantity)}</span>
+            </p>
+          )}
 
           <div ref={actionsRef} className="space-y-2.5">
             <AddToCartButton

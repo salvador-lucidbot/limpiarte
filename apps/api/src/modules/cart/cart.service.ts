@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { randomBytes } from "crypto";
 import { CartStatus, Prisma, ProductStatus } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
-import { PricingService } from "../catalog/pricing.service";
+import { BundlePromo, PricingService } from "../catalog/pricing.service";
 import { CouponEvaluationItem, CouponsService } from "../coupons/coupons.service";
 import { ShippingService } from "../shipping/shipping.service";
 
@@ -18,6 +18,7 @@ export interface CartItemView {
   compareAtPrice: number | null;
   quantity: number;
   lineTotal: number;
+  bundle: BundlePromo | null;
   availableStock: number;
   allowBackorder: boolean;
   unavailable: boolean;
@@ -251,7 +252,8 @@ export class CartService {
         unitPrice: pricing.price,
         compareAtPrice: pricing.compareAtPrice,
         quantity: item.quantity,
-        lineTotal: Math.round(pricing.price * item.quantity * 100) / 100,
+        lineTotal: this.pricingService.lineTotal(item.product, item.variant, item.quantity),
+        bundle: this.pricingService.resolveBundle(item.product, item.quantity),
         availableStock: item.variant ? item.variant.stock : item.product.stock,
         allowBackorder: item.product.allowBackorder,
         unavailable: this.isUnavailable(item)
@@ -278,8 +280,7 @@ export class CartService {
       cart.items.reduce((sum, item) => {
         const rate = item.product.taxRatePercent !== null ? Number(item.product.taxRatePercent) : 0;
         if (rate <= 0) return sum;
-        const pricing = this.pricingService.resolve(item.product, item.variant);
-        const lineTotal = pricing.price * item.quantity;
+        const lineTotal = this.pricingService.lineTotal(item.product, item.variant, item.quantity);
         return sum + (lineTotal * rate) / (100 + rate);
       }, 0) * 100
     ) / 100;
@@ -389,14 +390,11 @@ export class CartService {
   }
 
   toCouponItems(cart: CartWithItems): CouponEvaluationItem[] {
-    return cart.items.map((item) => {
-      const pricing = this.pricingService.resolve(item.product, item.variant);
-      return {
-        productId: item.productId,
-        categoryId: item.product.categoryId,
-        lineTotal: Math.round(pricing.price * item.quantity * 100) / 100
-      };
-    });
+    return cart.items.map((item) => ({
+      productId: item.productId,
+      categoryId: item.product.categoryId,
+      lineTotal: this.pricingService.lineTotal(item.product, item.variant, item.quantity)
+    }));
   }
 
   private async createCart(customerId: string | null): Promise<CartWithItems> {

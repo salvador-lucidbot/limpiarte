@@ -5,7 +5,8 @@ import type {
   Prisma,
   ProductDocumentKind,
   ProductRelationType,
-  ProductSpecGroup
+  ProductSpecGroup,
+  UsageMediaKind
 } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { decimalToNumber, parseHighlights } from "./catalog-content";
@@ -95,6 +96,23 @@ export interface ProductVariantView {
   label: string;
 }
 
+export interface ProductBannerView {
+  url: string;
+  linkUrl: string | null;
+  alt: string | null;
+}
+
+export interface BundlePromoView {
+  buyQuantity: number;
+  getQuantity: number;
+  label: string;
+}
+
+export interface ProductUsageMediaView {
+  url: string;
+  kind: UsageMediaKind;
+}
+
 export interface ProductDetail {
   id: string;
   slug: string;
@@ -128,6 +146,10 @@ export interface ProductDetail {
   dimensions: ProductDimensions | null;
   highlights: string[];
   warrantyText: string | null;
+  bundlePromo: BundlePromoView | null;
+  usageMedia: ProductUsageMediaView | null;
+  topBanner: ProductBannerView | null;
+  bottomBanner: ProductBannerView | null;
   images: { url: string; alt: string | null }[];
   videos: ProductVideoView[];
   documents: ProductDocumentView[];
@@ -250,6 +272,17 @@ function buildOptionViews(product: DetailProduct): ProductOptionView[] {
   }));
 }
 
+function buildBanner(url: string | null, linkUrl: string | null, alt: string | null): ProductBannerView | null {
+  if (!url) return null;
+  return { url, linkUrl, alt };
+}
+
+function buildUsageMedia(product: DetailProduct): ProductUsageMediaView | null {
+  if (!product.usageMediaUrl) return null;
+  if (!product.usageMediaKind) return null;
+  return { url: product.usageMediaUrl, kind: product.usageMediaKind };
+}
+
 function buildDimensions(product: DetailProduct): ProductDimensions | null {
   const dimensions = {
     lengthCm: decimalToNumber(product.lengthCm),
@@ -295,6 +328,7 @@ export class ProductPageService {
     const context = await this.catalogService.buildCardContext([product.id, ...relatedProducts.map((related) => related.id)]);
     const rating = context.ratings.get(product.id);
     const pricing = this.pricingService.resolve(product);
+    const bundle = this.pricingService.resolveBundle(product, 0);
     const totalStock =
       product.variants.length > 0 ? product.variants.reduce((sum, variant) => sum + variant.stock, 0) : product.stock;
 
@@ -331,6 +365,10 @@ export class ProductPageService {
       dimensions: buildDimensions(product),
       highlights: parseHighlights(product.highlights),
       warrantyText: product.warrantyText,
+      bundlePromo: bundle && { buyQuantity: bundle.buyQuantity, getQuantity: bundle.getQuantity, label: bundle.label },
+      usageMedia: buildUsageMedia(product),
+      topBanner: buildBanner(product.topBannerUrl, product.topBannerLinkUrl, product.topBannerAlt),
+      bottomBanner: buildBanner(product.bottomBannerUrl, product.bottomBannerLinkUrl, product.bottomBannerAlt),
       images: product.images.map((image) => ({ url: image.url, alt: image.alt })),
       videos: product.videos.map((video) => ({
         id: video.id,

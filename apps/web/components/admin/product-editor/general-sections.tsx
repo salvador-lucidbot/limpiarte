@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCOP } from "../../../lib/format";
 import { slugify } from "../slugify";
 import { Card, Field, inputClass } from "../ui";
 import { fieldSetter } from "./product-form-model";
@@ -18,6 +19,13 @@ interface GeneralSectionsProps {
   brands: ProductSelectOption[];
 }
 
+const BUNDLE_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "Sin promoción" },
+  { value: "1", label: "Pague 1, lleve 2" },
+  { value: "2", label: "Pague 2, lleve 3" },
+  { value: "3", label: "Pague 3, lleve 4" }
+];
+
 const STATUS_OPTIONS: { value: ProductFormValue["status"]; label: string }[] = [
   { value: "DRAFT", label: "Borrador" },
   { value: "ACTIVE", label: "Publicado" },
@@ -27,6 +35,11 @@ const STATUS_OPTIONS: { value: ProductFormValue["status"]; label: string }[] = [
 export function GeneralSections({ value, onUpdate, categories, brands }: GeneralSectionsProps): React.ReactNode {
   const set = fieldSetter(onUpdate);
   const variantStock = value.variants.reduce((total, variant) => total + (Number(variant.stock) || 0), 0);
+  const cost = Number(value.costPrice) || 0;
+  const basePrice = Number(value.basePrice) || 0;
+  const promoPrice = Number(value.promoPrice) || 0;
+  const sellingPrice = promoPrice > 0 && promoPrice < basePrice ? promoPrice : basePrice;
+  const marginPercent = cost > 0 && sellingPrice > 0 ? ((sellingPrice - cost) / sellingPrice) * 100 : null;
 
   return (
     <>
@@ -113,7 +126,37 @@ export function GeneralSections({ value, onUpdate, categories, brands }: General
           <Field label="Promo hasta">
             <input type="datetime-local" value={value.promoEndsAt} onChange={(event) => set("promoEndsAt", event.target.value)} className={inputClass} />
           </Field>
+          <Field label="Costo unitario (COP)">
+            <input type="number" min={0} value={value.costPrice} onChange={(event) => set("costPrice", event.target.value)} className={inputClass} />
+          </Field>
+          <Field label="Promoción pague y lleve">
+            <select value={value.promoBuyQuantity} onChange={(event) => set("promoBuyQuantity", event.target.value)} className={inputClass}>
+              {BUNDLE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </Field>
         </div>
+        {marginPercent !== null && (
+          <p
+            className={`mt-3 rounded-lg px-3 py-2 text-xs ${
+              marginPercent <= 0 ? "bg-red-50 text-red-700" : marginPercent < 20 ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-800"
+            }`}
+          >
+            Margen sobre {formatCOP(sellingPrice)}: <strong>{marginPercent.toFixed(1)} %</strong> ·{" "}
+            {formatCOP(sellingPrice - cost)} por unidad.{" "}
+            {marginPercent <= 0 && "Estás vendiendo por debajo del costo."}
+          </p>
+        )}
+        {value.promoBuyQuantity && (
+          <p className="mt-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-800">
+            La promoción se aplica de forma repetida y por presentación: cada {Number(value.promoBuyQuantity) + 1} unidades de la misma
+            variante, una no se cobra. Si también hay precio promocional, los dos descuentos se suman.
+          </p>
+        )}
+        <p className="mt-3 text-xs text-stone-400">El costo unitario es solo para calcular el margen en el panel: nunca se muestra en la tienda.</p>
       </Card>
 
       <Card id="producto-inventario" title="Inventario">

@@ -7,6 +7,7 @@ import { ToastProvider } from "../../lib/ui/toast-context";
 import { WishlistProvider } from "../../lib/wishlist/wishlist-context";
 import { BottomNav } from "../../components/store/bottom-nav";
 import { CartDrawer } from "../../components/store/cart-drawer";
+import { FloatingCartButton } from "../../components/store/floating-cart-button";
 import { FloatingWhatsApp } from "../../components/store/floating-whatsapp";
 import { StoreFooter } from "../../components/store/store-footer";
 import { StoreHeader } from "../../components/store/store-header";
@@ -72,6 +73,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
               <StoreFooter storeName={settings.storeName} />
             </div>
             <CartDrawer />
+            <FloatingCartButton />
             {settings.whatsapp && <FloatingWhatsApp phone={settings.whatsapp} />}
             <WelcomePopup settings={settings.welcomePopup} />
             <BottomNav />

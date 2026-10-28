@@ -5,6 +5,7 @@ import { GeneralSections } from "./product-editor/general-sections";
 import type { ProductSelectOption } from "./product-editor/general-sections";
 import { DocumentsSection, ImagesSection, VideosSection } from "./product-editor/media-sections";
 import { HighlightsSection, SpecsSection, VisualContentSection, WarrantySection } from "./product-editor/page-content-sections";
+import { BannersSection, UsageMediaSection } from "./product-editor/promo-sections";
 import { validateProductForm } from "./product-editor/product-form-model";
 import type { ProductFormUpdater, ProductFormValue } from "./product-editor/product-form-model";
 import { RelationsSection } from "./product-editor/relations-section";
@@ -23,6 +24,8 @@ const SECTION_LINKS: { id: string; label: string }[] = [
   { id: "producto-sobre", label: "Sobre este artículo" },
   { id: "producto-especificaciones", label: "Especificaciones" },
   { id: "producto-garantia", label: "Garantía" },
+  { id: "producto-modo-uso", label: "Modo de uso" },
+  { id: "producto-banners", label: "Banners" },
   { id: "producto-contenido-visual", label: "Contenido visual" },
   { id: "producto-ficha", label: "Ficha técnica" },
   { id: "producto-relacionados", label: "Relacionados" },
@@ -99,6 +102,8 @@ export function ProductForm({
       <HighlightsSection value={value} onUpdate={onUpdate} />
       <SpecsSection value={value} onUpdate={onUpdate} />
       <WarrantySection value={value} onUpdate={onUpdate} />
+      <UsageMediaSection value={value} onUpdate={onUpdate} onUploadBusyChange={trackUpload} />
+      <BannersSection value={value} onUpdate={onUpdate} />
       <VisualContentSection value={value} onUpdate={onUpdate} />
       <TechnicalSheetSection value={value} onUpdate={onUpdate} />
       <RelationsSection value={value} onUpdate={onUpdate} productId={productId} />

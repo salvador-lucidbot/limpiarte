@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { IconCart, IconDroplets, IconPlus, IconX } from "../../../components/icons";
+import { CartBundleNote } from "../../../components/store/cart-bundle-note";
 import { FreeShippingBar } from "../../../components/store/free-shipping-bar";
 import { ProductCardView } from "../../../components/store/product-card-view";
 import { apiFetch } from "../../../lib/api/client";
@@ -95,6 +96,7 @@ export default function CartPage(): React.ReactNode {
                       {item.name}
                     </Link>
                     {item.variantLabel && <p className="text-sm text-stone-500">{item.variantLabel}</p>}
+                    <CartBundleNote bundle={item.bundle} />
                     {item.unavailable && (
                       <p className="mt-1 text-sm font-semibold text-red-700">Ya no está disponible: quítalo del carrito para continuar.</p>
                     )}

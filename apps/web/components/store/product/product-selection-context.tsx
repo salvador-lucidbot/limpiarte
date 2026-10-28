@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import type { ProductOptionView, ProductVariantView } from "../../../lib/api/types";
+import type { BundlePromoView, ProductOptionView, ProductVariantView } from "../../../lib/api/types";
 import { findVariant, pickDefaultVariant, resolveSelection, selectionFromVariant } from "./variant-matching";
 import type { SelectedValues } from "./variant-matching";
 
@@ -18,6 +18,7 @@ export interface PurchasableProduct {
   lowStock: boolean;
   allowBackorder: boolean;
   weightKg: number | null;
+  bundlePromo: BundlePromoView | null;
   options: ProductOptionView[];
   variants: ProductVariantView[];
 }

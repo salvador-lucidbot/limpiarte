@@ -17,7 +17,13 @@ import {
   MinLength,
   ValidateNested
 } from "class-validator";
-import { ProductDocumentKind, ProductRelationType, ProductSpecGroup, ProductStatus } from "../../../generated/prisma/enums";
+import {
+  ProductDocumentKind,
+  ProductRelationType,
+  ProductSpecGroup,
+  ProductStatus,
+  UsageMediaKind
+} from "../../../generated/prisma/enums";
 import { PaginationDto } from "../../../common/pagination/pagination.dto";
 import { ContentBlockDto, HTTP_URL_OPTIONS, MAX_CONTENT_BLOCKS, MAX_URL_LENGTH } from "./content-block.dto";
 
@@ -27,6 +33,8 @@ export const MAX_SPECS = 60;
 export const MAX_VIDEOS = 8;
 export const MAX_DOCUMENTS = 10;
 export const MAX_RELATIONS = 40;
+export const MAX_PROMO_BUY_QUANTITY = 3;
+export const MAX_BANNER_ALT_LENGTH = 160;
 
 export class ProductImageDto {
   @IsString()
@@ -282,6 +290,57 @@ export class CreateProductDto {
   @IsNumber()
   @Min(0)
   taxRatePercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  costPrice?: number | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(MAX_PROMO_BUY_QUANTITY)
+  promoBuyQuantity?: number | null;
+
+  @IsOptional()
+  @IsUrl(HTTP_URL_OPTIONS)
+  @MaxLength(MAX_URL_LENGTH)
+  usageMediaUrl?: string | null;
+
+  @IsOptional()
+  @IsEnum(UsageMediaKind)
+  usageMediaKind?: UsageMediaKind | null;
+
+  @IsOptional()
+  @IsUrl(HTTP_URL_OPTIONS)
+  @MaxLength(MAX_URL_LENGTH)
+  topBannerUrl?: string | null;
+
+  @IsOptional()
+  @IsUrl(HTTP_URL_OPTIONS)
+  @MaxLength(MAX_URL_LENGTH)
+  topBannerLinkUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(MAX_BANNER_ALT_LENGTH)
+  topBannerAlt?: string | null;
+
+  @IsOptional()
+  @IsUrl(HTTP_URL_OPTIONS)
+  @MaxLength(MAX_URL_LENGTH)
+  bottomBannerUrl?: string | null;
+
+  @IsOptional()
+  @IsUrl(HTTP_URL_OPTIONS)
+  @MaxLength(MAX_URL_LENGTH)
+  bottomBannerLinkUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(MAX_BANNER_ALT_LENGTH)
+  bottomBannerAlt?: string | null;
 
   @IsOptional()
   @Type(() => Number)

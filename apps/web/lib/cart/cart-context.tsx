@@ -4,6 +4,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 import { apiFetch } from "../api/client";
 import { CartView } from "../api/types";
 import { useCustomerAuth } from "../auth/customer-auth-context";
+import { chargedUnits, recalculateBundle } from "../pricing/bundle-promo";
 
 const CART_TOKEN_KEY = "limpiarte_cart_token";
 
@@ -149,7 +150,12 @@ export function CartProvider({ children }: { children: ReactNode }): ReactNode {
         patchLocalCart((view) =>
           view.items.map((item) =>
             item.id === itemId
-              ? { ...item, quantity, lineTotal: Math.round(item.unitPrice * quantity * 100) / 100 }
+              ? {
+                  ...item,
+                  quantity,
+                  bundle: recalculateBundle(item.bundle, quantity),
+                  lineTotal: Math.round(item.unitPrice * chargedUnits(item.bundle, quantity) * 100) / 100
+                }
               : item
           )
         );

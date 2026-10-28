@@ -126,6 +126,18 @@ export function IconTruck(props: IconProps): React.ReactNode {
   );
 }
 
+export function IconGift(props: IconProps): React.ReactNode {
+  return (
+    <Icon {...props}>
+      <path d="M3.5 11.5h17v9.5h-17z" />
+      <path d="M2.5 7.5h19v4h-19z" />
+      <path d="M12 7.5V21" />
+      <path d="M12 7.5S10.8 3 8.3 3a2.25 2.25 0 0 0 0 4.5H12z" />
+      <path d="M12 7.5S13.2 3 15.7 3a2.25 2.25 0 0 1 0 4.5H12z" />
+    </Icon>
+  );
+}
+
 export function IconShieldCheck(props: IconProps): React.ReactNode {
   return (
     <Icon {...props}>

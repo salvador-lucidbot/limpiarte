@@ -232,6 +232,25 @@ export interface ContentBlockView {
   imageAlt: string | null;
 }
 
+export type UsageMediaKind = "IMAGEN" | "VIDEO" | "PDF";
+
+export interface ProductBannerView {
+  url: string;
+  linkUrl: string | null;
+  alt: string | null;
+}
+
+export interface BundlePromoView {
+  buyQuantity: number;
+  getQuantity: number;
+  label: string;
+}
+
+export interface ProductUsageMediaView {
+  url: string;
+  kind: UsageMediaKind;
+}
+
 export interface ProductDetail {
   id: string;
   slug: string;
@@ -265,6 +284,10 @@ export interface ProductDetail {
   dimensions: ProductDimensions | null;
   highlights: string[];
   warrantyText: string | null;
+  bundlePromo: BundlePromoView | null;
+  usageMedia: ProductUsageMediaView | null;
+  topBanner: ProductBannerView | null;
+  bottomBanner: ProductBannerView | null;
   images: { url: string; alt: string | null }[];
   videos: ProductVideoView[];
   documents: ProductDocumentView[];
@@ -392,6 +415,16 @@ export interface AdminProductPayload {
   promoStartsAt?: string;
   promoEndsAt?: string;
   taxRatePercent?: number;
+  costPrice?: number | null;
+  promoBuyQuantity?: number | null;
+  usageMediaUrl?: string | null;
+  usageMediaKind?: UsageMediaKind | null;
+  topBannerUrl?: string | null;
+  topBannerLinkUrl?: string | null;
+  topBannerAlt?: string | null;
+  bottomBannerUrl?: string | null;
+  bottomBannerLinkUrl?: string | null;
+  bottomBannerAlt?: string | null;
   stock?: number;
   stockBaseline?: number;
   expectedVersion?: number;
@@ -575,6 +608,16 @@ export interface AdminProductDetail {
   seoDescription: string | null;
   highlights: string[] | null;
   warrantyText: string | null;
+  costPrice: string | null;
+  promoBuyQuantity: number | null;
+  usageMediaUrl: string | null;
+  usageMediaKind: UsageMediaKind | null;
+  topBannerUrl: string | null;
+  topBannerLinkUrl: string | null;
+  topBannerAlt: string | null;
+  bottomBannerUrl: string | null;
+  bottomBannerLinkUrl: string | null;
+  bottomBannerAlt: string | null;
   version?: number;
   createdAt: string;
   updatedAt: string;
@@ -593,6 +636,15 @@ export interface AdminProductDetail {
   contentBlocks: AdminContentBlock[];
 }
 
+export interface CartBundlePromo {
+  buyQuantity: number;
+  getQuantity: number;
+  freeUnits: number;
+  chargedUnits: number;
+  unitsForNextFree: number;
+  label: string;
+}
+
 export interface CartItemView {
   id: string;
   productId: string;
@@ -605,6 +657,7 @@ export interface CartItemView {
   compareAtPrice: number | null;
   quantity: number;
   lineTotal: number;
+  bundle: CartBundlePromo | null;
   availableStock: number;
   allowBackorder: boolean;
   unavailable?: boolean;

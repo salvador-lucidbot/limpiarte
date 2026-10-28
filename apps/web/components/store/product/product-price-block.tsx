@@ -1,6 +1,6 @@
 "use client";
 
-import { IconTruck } from "../../icons";
+import { IconGift, IconTruck } from "../../icons";
 import { discountPercent } from "./product-format";
 import { useProductSelection } from "./product-selection-context";
 import { ListPrice, SplitPrice } from "./split-price";
@@ -14,6 +14,7 @@ export function ProductPriceBlock({ promoEndsLabel, taxIncluded }: ProductPriceB
   const { price, compareAtPrice, product } = useProductSelection();
   const percent = discountPercent(price, compareAtPrice);
   const showDeal = product.onPromo && percent !== null;
+  const bundlePromo = product.bundlePromo;
 
   return (
     <div className="border-t border-line pt-4">
@@ -32,6 +33,12 @@ export function ProductPriceBlock({ promoEndsLabel, taxIncluded }: ProductPriceB
         <SplitPrice amount={price} size="xl" />
       </div>
       {compareAtPrice !== null && percent !== null && <ListPrice compareAtPrice={compareAtPrice} className="mt-1.5 block text-sm" />}
+      {bundlePromo && (
+        <p className="mt-2.5 inline-flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-1.5 text-sm font-bold text-brand-800 ring-1 ring-brand-200">
+          <IconGift size={17} className="shrink-0" />
+          {bundlePromo.label}
+        </p>
+      )}
       <p className="mt-1.5 text-sm text-slate-600">
         {taxIncluded ? "IVA incluido." : "Precio final."}
         {showDeal && promoEndsLabel ? ` Oferta válida hasta el ${promoEndsLabel}.` : ""}

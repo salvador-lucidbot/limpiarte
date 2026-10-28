@@ -6,7 +6,8 @@ import type {
   ProductRelationType,
   ProductSpecGroup,
   ProductStatus,
-  ProductVariantInput
+  ProductVariantInput,
+  UsageMediaKind
 } from "../../../lib/api/types";
 import { contentBlocksError, contentBlocksPayload, contentBlocksToForm } from "../content-block-model";
 import type { ContentBlockFormValue } from "../content-block-model";
@@ -110,6 +111,16 @@ export interface ProductFormValue {
   promoStartsAt: string;
   promoEndsAt: string;
   taxRatePercent: string;
+  costPrice: string;
+  promoBuyQuantity: string;
+  usageMediaUrl: string;
+  usageMediaKind: UsageMediaKind | "";
+  topBannerUrl: string;
+  topBannerLinkUrl: string;
+  topBannerAlt: string;
+  bottomBannerUrl: string;
+  bottomBannerLinkUrl: string;
+  bottomBannerAlt: string;
   stock: string;
   lowStockThreshold: string;
   allowBackorder: boolean;
@@ -159,6 +170,16 @@ export const EMPTY_PRODUCT_FORM: ProductFormValue = {
   promoStartsAt: "",
   promoEndsAt: "",
   taxRatePercent: "",
+  costPrice: "",
+  promoBuyQuantity: "",
+  usageMediaUrl: "",
+  usageMediaKind: "",
+  topBannerUrl: "",
+  topBannerLinkUrl: "",
+  topBannerAlt: "",
+  bottomBannerUrl: "",
+  bottomBannerLinkUrl: "",
+  bottomBannerAlt: "",
   stock: "0",
   lowStockThreshold: "5",
   allowBackorder: false,
@@ -226,6 +247,16 @@ export function detailToForm(detail: AdminProductDetail): ProductFormValue {
     promoStartsAt: toLocalDatetime(detail.promoStartsAt),
     promoEndsAt: toLocalDatetime(detail.promoEndsAt),
     taxRatePercent: decimalToInput(detail.taxRatePercent),
+    costPrice: decimalToInput(detail.costPrice),
+    promoBuyQuantity: detail.promoBuyQuantity ? String(detail.promoBuyQuantity) : "",
+    usageMediaUrl: detail.usageMediaUrl ?? "",
+    usageMediaKind: detail.usageMediaKind ?? "",
+    topBannerUrl: detail.topBannerUrl ?? "",
+    topBannerLinkUrl: detail.topBannerLinkUrl ?? "",
+    topBannerAlt: detail.topBannerAlt ?? "",
+    bottomBannerUrl: detail.bottomBannerUrl ?? "",
+    bottomBannerLinkUrl: detail.bottomBannerLinkUrl ?? "",
+    bottomBannerAlt: detail.bottomBannerAlt ?? "",
     stock: String(detail.stock),
     lowStockThreshold: String(detail.lowStockThreshold),
     allowBackorder: detail.allowBackorder,
@@ -362,6 +393,16 @@ export function buildProductPayload(form: ProductFormValue): AdminProductPayload
     promoStartsAt: form.promoStartsAt ? new Date(form.promoStartsAt).toISOString() : undefined,
     promoEndsAt: form.promoEndsAt ? new Date(form.promoEndsAt).toISOString() : undefined,
     taxRatePercent: legacyOptional(form.taxRatePercent),
+    costPrice: optionalNumber(form.costPrice),
+    promoBuyQuantity: optionalInteger(form.promoBuyQuantity),
+    usageMediaUrl: optionalText(form.usageMediaUrl),
+    usageMediaKind: form.usageMediaUrl.trim() ? form.usageMediaKind || null : null,
+    topBannerUrl: optionalText(form.topBannerUrl),
+    topBannerLinkUrl: optionalText(form.topBannerLinkUrl),
+    topBannerAlt: optionalText(form.topBannerAlt),
+    bottomBannerUrl: optionalText(form.bottomBannerUrl),
+    bottomBannerLinkUrl: optionalText(form.bottomBannerLinkUrl),
+    bottomBannerAlt: optionalText(form.bottomBannerAlt),
     stock: changedStock(optionalInteger(form.stock) ?? 0, form.stockBaseline),
     stockBaseline: form.stockBaseline ?? undefined,
     expectedVersion: form.version ?? undefined,

@@ -8,6 +8,15 @@ export interface EffectivePrice {
   onPromo: boolean;
 }
 
+export interface BundlePromo {
+  buyQuantity: number;
+  getQuantity: number;
+  freeUnits: number;
+  chargedUnits: number;
+  unitsForNextFree: number;
+  label: string;
+}
+
 @Injectable()
 export class PricingService {
   constructor(private readonly prisma: PrismaService) {}
@@ -33,6 +42,35 @@ export class PricingService {
         : null;
 
     return { price, compareAtPrice, onPromo: promo !== null && promo < base };
+  }
+
+  resolveBundle(product: Product, quantity: number): BundlePromo | null {
+    const buyQuantity = product.promoBuyQuantity ?? 0;
+    if (buyQuantity <= 0) return null;
+
+    const getQuantity = buyQuantity + 1;
+    const freeUnits = Math.floor(quantity / getQuantity);
+    const remainder = quantity % getQuantity;
+
+    return {
+      buyQuantity,
+      getQuantity,
+      freeUnits,
+      chargedUnits: quantity - freeUnits,
+      unitsForNextFree: getQuantity - remainder,
+      label: `Pague ${buyQuantity}, lleve ${getQuantity}`
+    };
+  }
+
+  chargedUnits(product: Product, quantity: number): number {
+    const bundle = this.resolveBundle(product, quantity);
+    if (!bundle) return quantity;
+    return bundle.chargedUnits;
+  }
+
+  lineTotal(product: Product, variant: ProductVariant | null, quantity: number): number {
+    const { price } = this.resolve(product, variant);
+    return Math.round(price * this.chargedUnits(product, quantity) * 100) / 100;
   }
 
   async resolveForQuantity(

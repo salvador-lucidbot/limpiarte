@@ -20,6 +20,10 @@ type DetailExtensionKey =
   | "dimensions"
   | "highlights"
   | "warrantyText"
+  | "bundlePromo"
+  | "usageMedia"
+  | "topBanner"
+  | "bottomBanner"
   | "videos"
   | "documents"
   | "specs"
@@ -113,6 +117,10 @@ function normalizeProductDetail(payload: ProductDetailPayload): ProductDetail {
     dimensions: payload.dimensions ?? null,
     highlights: payload.highlights ?? [],
     warrantyText: payload.warrantyText ?? null,
+    bundlePromo: payload.bundlePromo ?? null,
+    usageMedia: payload.usageMedia ?? null,
+    topBanner: payload.topBanner ?? null,
+    bottomBanner: payload.bottomBanner ?? null,
     videos: (payload.videos ?? []).map((video) => ({ ...video, createdAt: video.createdAt ?? null })),
     documents: payload.documents ?? [],
     specs: payload.specs ?? [],
