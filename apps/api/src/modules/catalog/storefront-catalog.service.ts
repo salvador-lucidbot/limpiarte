@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { PaginatedResult, paginate, skipTake } from "../../common/pagination/pagination.dto";
 import { OrderStatus, Prisma, ProductStatus } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -27,7 +27,7 @@ export interface ProductCard {
   tags: string[];
 }
 
-interface CardContext {
+export interface CardContext {
   ratings: Map<string, { average: number; count: number }>;
   bestSellers: Set<string>;
 }
@@ -133,7 +133,7 @@ export function buildPriceRanges(prices: number[]): PriceRangeFacet[] {
   return ranges.filter((range) => range.count > 0);
 }
 
-type CardProduct = Prisma.ProductGetPayload<{
+export type CardProduct = Prisma.ProductGetPayload<{
   include: {
     brand: true;
     category: true;
@@ -143,7 +143,7 @@ type CardProduct = Prisma.ProductGetPayload<{
   };
 }>;
 
-const CARD_INCLUDE = {
+export const CARD_INCLUDE = {
   brand: true,
   category: true,
   images: { orderBy: { position: "asc" }, take: 2 },
@@ -159,6 +159,7 @@ const SUGGEST_INCLUDE = {
 
 const NEW_PRODUCT_DAYS = 30;
 const BEST_SELLER_POOL = 8;
+const BEST_SELLERS_CACHE_MS = 300_000;
 
 /** Minúsculas y sin tildes, para puntuar coincidencias del mismo modo que las compara MySQL. */
 function normalize(value: string): string {
@@ -186,6 +187,8 @@ function matchScore(product: { name: string; brand?: { name: string } | null; ca
 
 @Injectable()
 export class StorefrontCatalogService {
+  private bestSellersCache: { value: Set<string>; expiresAt: number } | null = null;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly pricingService: PricingService
@@ -241,13 +244,13 @@ export class StorefrontCatalogService {
         take: limit * 3
       }),
       this.prisma.category.findMany({
-        where: { name: { contains: query }, products: { some: activeProducts } },
+        where: { isActive: true, name: { contains: query }, products: { some: activeProducts } },
         select: { name: true, slug: true },
         orderBy: { name: "asc" },
         take: 4
       }),
       this.prisma.brand.findMany({
-        where: { name: { contains: query }, products: { some: activeProducts } },
+        where: { isActive: true, name: { contains: query }, products: { some: activeProducts } },
         select: { name: true, slug: true },
         orderBy: { name: "asc" },
         take: 4
@@ -279,28 +282,17 @@ export class StorefrontCatalogService {
     return products.map((product) => this.toCard(product, context));
   }
 
-  private async buildCardContext(productIds: string[]): Promise<CardContext> {
+  async buildCardContext(productIds: string[]): Promise<CardContext> {
     if (productIds.length === 0) return { ratings: new Map(), bestSellers: new Set() };
 
-    const since = new Date(Date.now() - 30 * 24 * 60 * 60_000);
-
-    const [ratingGroups, salesGroups] = await Promise.all([
+    const [ratingGroups, bestSellers] = await Promise.all([
       this.prisma.productReview.groupBy({
         by: ["productId"],
         where: { productId: { in: productIds }, status: "APPROVED" },
         _avg: { rating: true },
         _count: { _all: true }
       }),
-      this.prisma.orderItem.groupBy({
-        by: ["productId"],
-        where: {
-          productId: { not: null },
-          order: { status: { in: ["PAYMENT_CONFIRMED", "PREPARING", "SHIPPED", "DELIVERED"] }, createdAt: { gte: since } }
-        },
-        _sum: { quantity: true },
-        orderBy: { _sum: { quantity: "desc" } },
-        take: BEST_SELLER_POOL
-      })
+      this.bestSellers()
     ]);
 
     const ratings = new Map<string, { average: number; count: number }>();
@@ -311,15 +303,30 @@ export class StorefrontCatalogService {
       });
     }
 
-    const bestSellers = new Set<string>();
-    for (const group of salesGroups) {
-      if (group.productId) bestSellers.add(group.productId);
-    }
-
     return { ratings, bestSellers };
   }
 
-  private promoCondition(now: Date): Prisma.ProductWhereInput {
+  private async bestSellers(): Promise<Set<string>> {
+    if (this.bestSellersCache && Date.now() < this.bestSellersCache.expiresAt) return this.bestSellersCache.value;
+
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60_000);
+    const salesGroups = await this.prisma.orderItem.groupBy({
+      by: ["productId"],
+      where: {
+        productId: { not: null },
+        order: { status: { in: ["PAYMENT_CONFIRMED", "PREPARING", "SHIPPED", "DELIVERED"] }, createdAt: { gte: since } }
+      },
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: "desc" } },
+      take: BEST_SELLER_POOL
+    });
+
+    const value = new Set(salesGroups.flatMap((group) => (group.productId ? [group.productId] : [])));
+    this.bestSellersCache = { value, expiresAt: Date.now() + BEST_SELLERS_CACHE_MS };
+    return value;
+  }
+
+  promoCondition(now: Date): Prisma.ProductWhereInput {
     return {
       promoPrice: { not: null },
       AND: [
@@ -398,7 +405,7 @@ export class StorefrontCatalogService {
 
     const [categories, brands] = await Promise.all([
       categoryIds.length > 0 ? this.prisma.category.findMany({ where: { id: { in: categoryIds }, isActive: true } }) : [],
-      brandIds.length > 0 ? this.prisma.brand.findMany({ where: { id: { in: brandIds } } }) : []
+      brandIds.length > 0 ? this.prisma.brand.findMany({ where: { id: { in: brandIds }, isActive: true } }) : []
     ]);
 
     const categoryFacets: FacetOption[] = categoryGroups
@@ -463,95 +470,6 @@ export class StorefrontCatalogService {
     return this.enrichCards(products);
   }
 
-  async productDetail(slug: string): Promise<Record<string, unknown>> {
-    const product = await this.prisma.product.findFirst({
-      where: { slug, deletedAt: null, status: ProductStatus.ACTIVE },
-      include: {
-        brand: true,
-        category: true,
-        images: { orderBy: { position: "asc" } },
-        options: { include: { values: { orderBy: { position: "asc" } } }, orderBy: { position: "asc" } },
-        variants: {
-          where: { isActive: true },
-          include: { optionValues: { include: { optionValue: { include: { option: true } } } } }
-        },
-        faqs: { orderBy: { position: "asc" } },
-        tags: { include: { tag: true } },
-        relationsFrom: {
-          include: {
-            relatedProduct: { include: CARD_INCLUDE }
-          }
-        }
-      }
-    });
-    if (!product) throw new NotFoundException("Producto no encontrado");
-
-    const pricing = this.pricingService.resolve(product);
-    const totalVariantStock = product.variants.reduce((sum, variant) => sum + variant.stock, 0);
-    const totalStock = product.variants.length > 0 ? totalVariantStock : product.stock;
-    const inStock = totalStock > 0;
-    const detailContext = await this.buildCardContext([product.id]);
-    const detailRating = detailContext.ratings.get(product.id);
-    const relatedCards = await this.enrichCards(product.relationsFrom.map((relation) => relation.relatedProduct));
-
-    return {
-      id: product.id,
-      slug: product.slug,
-      name: product.name,
-      sku: product.sku,
-      description: product.description,
-      technicalSheet: {
-        content: product.technicalContent,
-        presentation: product.presentation,
-        performance: product.performance,
-        usageInstructions: product.usageInstructions,
-        precautions: product.precautions
-      },
-      brandName: product.brand?.name ?? null,
-      category: product.category ? { name: product.category.name, slug: product.category.slug } : null,
-      price: pricing.price,
-      compareAtPrice: pricing.compareAtPrice,
-      onPromo: pricing.onPromo,
-      taxRatePercent: product.taxRatePercent !== null ? Number(product.taxRatePercent) : null,
-      stock: totalStock,
-      inStock,
-      lowStock: inStock && totalStock <= product.lowStockThreshold,
-      allowBackorder: product.allowBackorder,
-      rating: detailRating?.average ?? null,
-      reviewCount: detailRating?.count ?? 0,
-      images: product.images.map((image) => ({ url: image.url, alt: image.alt })),
-      options: product.options.map((option) => ({
-        id: option.id,
-        name: option.name,
-        values: option.values.map((value) => ({ id: value.id, value: value.value }))
-      })),
-      variants: product.variants.map((variant) => {
-        const variantPricing = this.pricingService.resolve(product, variant);
-        return {
-          id: variant.id,
-          sku: variant.sku,
-          price: variantPricing.price,
-          compareAtPrice: variantPricing.compareAtPrice,
-          stock: variant.stock,
-          imageUrl: variant.imageUrl,
-          optionValueIds: variant.optionValues.map((link) => link.optionValueId),
-          label: variant.optionValues.map((link) => link.optionValue.value).join(" / ")
-        };
-      }),
-      faqs: product.faqs.map((faq) => ({ question: faq.question, answer: faq.answer })),
-      tags: product.tags.map((link) => link.tag.name),
-      related: product.relationsFrom.flatMap((relation, index) => {
-        const card = relatedCards[index];
-        if (!card) return [];
-        return [{ type: relation.type, product: card }];
-      }),
-      seo: {
-        title: product.seoTitle ?? product.name,
-        description: product.seoDescription ?? product.description?.slice(0, 160) ?? null
-      }
-    };
-  }
-
   async stats(): Promise<StorefrontStats> {
     const activeProducts = { deletedAt: null, status: ProductStatus.ACTIVE };
 
@@ -609,7 +527,7 @@ export class StorefrontCatalogService {
     return roots;
   }
 
-  private toCard(product: CardProduct, context: CardContext): ProductCard {
+  toCard(product: CardProduct, context: CardContext): ProductCard {
     const pricing = this.pricingService.resolve(product);
     const totalStock = product.variants.length > 0
       ? product.variants.reduce((sum, variant) => sum + variant.stock, 0)

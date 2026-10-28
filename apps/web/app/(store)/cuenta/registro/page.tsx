@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { useCustomerAuth } from "../../../../lib/auth/customer-auth-context";
 
-export default function RegisterPage(): React.ReactNode {
+function RegisterForm(): React.ReactNode {
   const { register } = useCustomerAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
-    email: "",
+    email: searchParams.get("email") ?? "",
     phone: "",
     password: "",
     acceptsTerms: false,
@@ -20,11 +21,13 @@ export default function RegisterPage(): React.ReactNode {
   });
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [emailTaken, setEmailTaken] = useState(false);
 
   async function submit(event: React.FormEvent): Promise<void> {
     event.preventDefault();
     setSubmitting(true);
     setErrorMessage(null);
+    setEmailTaken(false);
     try {
       await register({
         email: form.email,
@@ -38,7 +41,11 @@ export default function RegisterPage(): React.ReactNode {
       });
       router.push("/cuenta");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No se pudo crear la cuenta");
+      const message = error instanceof Error ? error.message : "No se pudo crear la cuenta";
+      // El API responde "Ya existe una cuenta con este correo": ahí conviene ofrecer el login
+      // con el correo ya escrito en vez de dejar al visitante en un callejón sin salida.
+      setEmailTaken(message.toLowerCase().includes("ya existe"));
+      setErrorMessage(message);
       setSubmitting(false);
     }
   }
@@ -120,7 +127,19 @@ export default function RegisterPage(): React.ReactNode {
           <span>Quiero recibir ofertas y novedades</span>
         </label>
 
-        {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
+        {errorMessage && (
+          <div className="rounded-lg bg-red-50 px-3 py-2">
+            <p className="text-sm text-red-600">{errorMessage}</p>
+            {emailTaken && (
+              <Link
+                href={`/cuenta/login?email=${encodeURIComponent(form.email)}`}
+                className="mt-1 inline-block text-sm font-semibold text-brand-700 hover:underline"
+              >
+                Inicia sesión con {form.email}
+              </Link>
+            )}
+          </div>
+        )}
         <button
           type="submit"
           disabled={submitting}
@@ -131,10 +150,21 @@ export default function RegisterPage(): React.ReactNode {
       </form>
       <p className="mt-6 text-center text-sm text-stone-600">
         ¿Ya tienes cuenta?{" "}
-        <Link href="/cuenta/login" className="font-semibold text-brand-700 hover:underline">
+        <Link
+          href={form.email ? `/cuenta/login?email=${encodeURIComponent(form.email)}` : "/cuenta/login"}
+          className="font-semibold text-brand-700 hover:underline"
+        >
           Inicia sesión
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function RegisterPage(): React.ReactNode {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   );
 }

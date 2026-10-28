@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { ImageUrlField } from "../../../../components/admin/image-upload";
-import { slugify } from "../../../../components/admin/product-form";
+import { slugify } from "../../../../components/admin/slugify";
 import { Badge, Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
 import { IconFileText, IconImage, IconMail, IconMenu, IconPause, IconPencil, IconPlay, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
+import { useSaving } from "../../../../lib/admin/use-saving";
 
 type Tab = "banners" | "paginas" | "blog" | "menu" | "suscriptores";
 
@@ -118,6 +119,7 @@ function SubscribersTab(): React.ReactNode {
 function BannersTab(): React.ReactNode {
   const { data, reload } = useAdminGet<BannerRow[]>("/admin/marketing/banners");
   const request = useAdminRequest();
+  const { pending, run } = useSaving();
   const [form, setForm] = useState({ title: "", subtitle: "", imageUrl: "", linkUrl: "", buttonText: "", section: "HOME_HERO", position: "0" });
 
   async function submit(event: React.FormEvent): Promise<void> {
@@ -170,7 +172,7 @@ function BannersTab(): React.ReactNode {
       </Card>
 
       <Card title="Nuevo banner">
-        <form onSubmit={(event) => void submit(event)} className="space-y-3">
+        <form onSubmit={(event) => { event.preventDefault(); void run("form", () => submit(event)); }} className="space-y-3">
           <Field label="Título *">
             <input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} className={inputClass} />
           </Field>
@@ -202,7 +204,7 @@ function BannersTab(): React.ReactNode {
               <input type="number" value={form.position} onChange={(event) => setForm({ ...form, position: event.target.value })} className={inputClass} />
             </Field>
           </div>
-          <Button type="submit">Crear banner</Button>
+          <Button type="submit" loading={pending === "form"}>Crear banner</Button>
         </form>
       </Card>
     </div>
@@ -212,6 +214,7 @@ function BannersTab(): React.ReactNode {
 function PagesTab(): React.ReactNode {
   const { data, reload } = useAdminGet<PageRow[]>("/admin/marketing/pages");
   const request = useAdminRequest();
+  const { pending, run } = useSaving();
   const [form, setForm] = useState({ slug: "", title: "", content: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -255,7 +258,7 @@ function PagesTab(): React.ReactNode {
       </Card>
 
       <Card title={editingId ? "Editar página" : "Nueva página"}>
-        <form onSubmit={(event) => void submit(event)} className="space-y-3">
+        <form onSubmit={(event) => { event.preventDefault(); void run("form", () => submit(event)); }} className="space-y-3">
           <Field label="Título *">
             <input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} className={inputClass} />
           </Field>
@@ -266,7 +269,7 @@ function PagesTab(): React.ReactNode {
             <textarea required rows={10} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} className={`${inputClass} font-mono text-xs`} />
           </Field>
           <div className="flex gap-2">
-            <Button type="submit">{editingId ? "Guardar" : "Crear"}</Button>
+            <Button type="submit" loading={pending === "form"}>{editingId ? "Guardar" : "Crear"}</Button>
             {editingId && (
               <Button
                 type="button"
@@ -289,6 +292,7 @@ function PagesTab(): React.ReactNode {
 function BlogTab(): React.ReactNode {
   const { data, reload } = useAdminGet<PostRow[]>("/admin/marketing/blog");
   const request = useAdminRequest();
+  const { pending, run } = useSaving();
   const [form, setForm] = useState({ slug: "", title: "", excerpt: "", content: "", coverImageUrl: "", status: "DRAFT" });
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -346,7 +350,7 @@ function BlogTab(): React.ReactNode {
       </Card>
 
       <Card title={editingId ? "Editar entrada" : "Nueva entrada"}>
-        <form onSubmit={(event) => void submit(event)} className="space-y-3">
+        <form onSubmit={(event) => { event.preventDefault(); void run("form", () => submit(event)); }} className="space-y-3">
           <Field label="Título *">
             <input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} className={inputClass} />
           </Field>
@@ -369,7 +373,7 @@ function BlogTab(): React.ReactNode {
             </select>
           </Field>
           <div className="flex gap-2">
-            <Button type="submit">{editingId ? "Guardar" : "Crear"}</Button>
+            <Button type="submit" loading={pending === "form"}>{editingId ? "Guardar" : "Crear"}</Button>
             {editingId && (
               <Button
                 type="button"
@@ -392,6 +396,7 @@ function BlogTab(): React.ReactNode {
 function MenuTab(): React.ReactNode {
   const { data, reload } = useAdminGet<MenuRow[]>("/admin/marketing/menu");
   const request = useAdminRequest();
+  const { pending, run } = useSaving();
   const [form, setForm] = useState({ location: "HEADER" as "HEADER" | "FOOTER", label: "", url: "", position: "0" });
 
   async function submit(event: React.FormEvent): Promise<void> {
@@ -424,7 +429,7 @@ function MenuTab(): React.ReactNode {
       </Card>
 
       <Card title="Nuevo ítem">
-        <form onSubmit={(event) => void submit(event)} className="space-y-3">
+        <form onSubmit={(event) => { event.preventDefault(); void run("form", () => submit(event)); }} className="space-y-3">
           <Field label="Ubicación">
             <select
               value={form.location}
@@ -444,7 +449,7 @@ function MenuTab(): React.ReactNode {
           <Field label="Orden">
             <input type="number" value={form.position} onChange={(event) => setForm({ ...form, position: event.target.value })} className={inputClass} />
           </Field>
-          <Button type="submit">Agregar</Button>
+          <Button type="submit" loading={pending === "form"}>Agregar</Button>
         </form>
       </Card>
     </div>

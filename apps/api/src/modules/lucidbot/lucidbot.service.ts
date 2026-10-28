@@ -8,7 +8,8 @@ import {
   LucidBotConnection,
   LucidBotEventLog,
   LucidBotEventType,
-  Prisma
+  Prisma,
+  ProductStatus
 } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 
@@ -174,12 +175,18 @@ export class LucidBotService {
         data: { status: CartStatus.ABANDONED, abandonedAt: new Date(), lucidNotifiedAt: new Date() }
       });
 
+      const offeredItems = cart.items.filter(
+        (item) =>
+          item.product.deletedAt === null && item.product.status === ProductStatus.ACTIVE && (item.variant === null || item.variant.isActive)
+      );
+      if (offeredItems.length === 0) continue;
+
       await this.dispatch(LucidBotEventType.CART_ABANDONED, {
         cartId: cart.id,
         customer: cart.customer
           ? { id: cart.customer.id, email: cart.customer.email, firstName: cart.customer.firstName, phone: cart.customer.phone ?? null }
           : null,
-        items: cart.items.map((item) => ({
+        items: offeredItems.map((item) => ({
           productId: item.productId,
           name: item.product.name,
           variantId: item.variantId,

@@ -140,7 +140,7 @@ export default function LucidBotPage(): React.ReactNode {
               />
             </Field>
             <div className="flex gap-2">
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" loading={saving}>
                 Guardar conexión
               </Button>
               <Button type="button" variant="secondary" onClick={() => void testConnection()} disabled={!connection?.isConfigured}>

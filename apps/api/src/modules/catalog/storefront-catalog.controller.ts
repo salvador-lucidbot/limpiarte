@@ -1,9 +1,10 @@
 import { Controller, Get, Header, Param, Query } from "@nestjs/common";
 import { Public } from "../../common/decorators/public.decorator";
-import { Brand } from "../../generated/prisma/client";
+import type { Brand } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CatalogQueryDto } from "./dto/catalog-query.dto";
 import { ProductFeedService } from "./product-feed.service";
+import { ProductPageService } from "./product-page.service";
 import { StorefrontCatalogService } from "./storefront-catalog.service";
 
 @Public()
@@ -11,6 +12,7 @@ import { StorefrontCatalogService } from "./storefront-catalog.service";
 export class StorefrontCatalogController {
   constructor(
     private readonly catalogService: StorefrontCatalogService,
+    private readonly productPageService: ProductPageService,
     private readonly productFeedService: ProductFeedService,
     private readonly prisma: PrismaService
   ) {}
@@ -28,8 +30,8 @@ export class StorefrontCatalogController {
   @Get("brands")
   brands(): Promise<Brand[]> {
     return this.prisma.brand.findMany({
-      where: { products: { some: { deletedAt: null, status: "ACTIVE" } } },
-      orderBy: { name: "asc" }
+      where: { isActive: true, products: { some: { deletedAt: null, status: "ACTIVE" } } },
+      orderBy: [{ position: "asc" }, { name: "asc" }]
     });
   }
 
@@ -54,9 +56,15 @@ export class StorefrontCatalogController {
     return this.catalogService.promoProducts(8);
   }
 
+  @Get("products/:slug/recommendations")
+  @Header("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
+  recommendations(@Param("slug") slug: string): ReturnType<ProductPageService["recommendations"]> {
+    return this.productPageService.recommendations(slug);
+  }
+
   @Get("products/:slug")
-  productDetail(@Param("slug") slug: string): ReturnType<StorefrontCatalogService["productDetail"]> {
-    return this.catalogService.productDetail(slug);
+  productDetail(@Param("slug") slug: string): ReturnType<ProductPageService["productDetail"]> {
+    return this.productPageService.productDetail(slug);
   }
 
   @Get("categories")

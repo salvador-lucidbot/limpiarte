@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { BrandStoreHeader } from "../../../components/store/brand-store-header";
 import { CatalogFilters, CatalogSort } from "../../../components/store/catalog-filters";
 import { MobileFilters } from "../../../components/store/mobile-filters";
 import { ProductCardView } from "../../../components/store/product-card-view";
 import { apiFetch } from "../../../lib/api/client";
 import { CatalogListing, CategoryNode } from "../../../lib/api/types";
+import type { StoreBrandView } from "../../../lib/api/types";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -20,6 +22,30 @@ const EMPTY_LISTING: CatalogListing = {
 
 export const metadata = { title: "Tienda" };
 
+async function loadBrand(slug: string): Promise<StoreBrandView | null> {
+  try {
+    const brands = await apiFetch<StoreBrandView[]>("/catalog/brands", { revalidate: 300 });
+    return brands.find((brand) => brand.slug === slug) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+interface ListingTitleInput {
+  searchTerm: string | undefined;
+  brandName: string | null;
+  categoryName: string | null;
+  promoOnly: boolean;
+}
+
+function resolveListingTitle({ searchTerm, brandName, categoryName, promoOnly }: ListingTitleInput): string {
+  if (searchTerm) return `Resultados para "${searchTerm}"`;
+  if (brandName && categoryName) return `${categoryName} de ${brandName}`;
+  if (brandName) return brandName;
+  if (categoryName) return categoryName;
+  return promoOnly ? "Ofertas" : "Productos de aseo";
+}
+
 export default async function CatalogPage({ searchParams }: { searchParams: SearchParams }): Promise<React.ReactNode> {
   const params = await searchParams;
   const query = new URLSearchParams();
@@ -29,6 +55,9 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     if (value) query.set(key, value);
   }
   query.set("perPage", "24");
+
+  const brandSlug = firstValue(params.brand);
+  const brandRequest = brandSlug ? loadBrand(brandSlug) : Promise.resolve(null);
 
   let listing = EMPTY_LISTING;
   let categoryTree: CategoryNode[] = [];
@@ -40,6 +69,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
   } catch {
     listing = EMPTY_LISTING;
   }
+  const activeBrand = await brandRequest;
 
   const activeCategorySlug = firstValue(params.category);
   const activeCategory = activeCategorySlug
@@ -55,9 +85,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
       null)
     : null;
 
-  const listingTitle = searchTerm
-    ? `Resultados para "${searchTerm}"`
-    : (categoryName ?? (promoOnly ? "Ofertas" : "Productos de aseo"));
+  const listingTitle = resolveListingTitle({ searchTerm, brandName: activeBrand?.name ?? null, categoryName, promoOnly });
 
   const currentPage = listing.meta.page;
 
@@ -82,7 +110,15 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
             <span className="text-slate-500">{categoryName}</span>
           </>
         )}
+        {activeBrand && (
+          <>
+            <span className="mx-1.5">›</span>
+            <span className="text-slate-500">{activeBrand.name}</span>
+          </>
+        )}
       </nav>
+
+      {activeBrand && <BrandStoreHeader brand={activeBrand} />}
 
       <div className="grid gap-8 lg:grid-cols-[250px_1fr]">
         <div>

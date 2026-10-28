@@ -1,3 +1,5 @@
+import { isBusinessDay } from "./colombian-holidays";
+
 const copFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
   currency: "COP",
@@ -23,8 +25,7 @@ function addBusinessDays(start: Date, days: number): Date {
   let remaining = days;
   while (remaining > 0) {
     result.setDate(result.getDate() + 1);
-    const weekday = result.getDay();
-    if (weekday !== 0 && weekday !== 6) remaining -= 1;
+    if (isBusinessDay(result.getFullYear(), result.getMonth() + 1, result.getDate())) remaining -= 1;
   }
   return result;
 }

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Badge, Button, Card, EmptyState, Pagination, statusTone, Table, inputClass } from "../../../../components/admin/ui";
 import { IconCopy, IconDroplets, IconPause, IconPlay, IconPlus, IconTrash, IconUpload } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
+import { useSaving } from "../../../../lib/admin/use-saving";
 import { Paginated } from "../../../../lib/api/types";
 import { formatCOP } from "../../../../lib/format";
 import { useAdminDialog } from "../../../../lib/admin/dialog-context";
@@ -35,6 +36,7 @@ export default function AdminProductsPage(): React.ReactNode {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectAllMatching, setSelectAllMatching] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const { pending, run } = useSaving();
   const request = useAdminRequest();
   const { confirm } = useAdminDialog();
 
@@ -304,7 +306,12 @@ export default function AdminProductsPage(): React.ReactNode {
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex gap-1">
-                      <Button variant="ghost" title={product.status === "ACTIVE" ? "Despublicar" : "Publicar"} onClick={() => void toggleStatus(product)}>
+                      <Button
+                        variant="ghost"
+                        title={product.status === "ACTIVE" ? "Despublicar" : "Publicar"}
+                        loading={pending === product.id}
+                        onClick={() => void run(product.id, () => toggleStatus(product))}
+                      >
                         {product.status === "ACTIVE" ? <IconPause size={15} /> : <IconPlay size={15} />}
                       </Button>
                       <Button variant="ghost" title="Duplicar" onClick={() => duplicate(product.id, product.name)}>

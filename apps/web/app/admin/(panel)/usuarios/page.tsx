@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Badge, Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
 import { IconPause, IconPencil, IconPlay, IconShieldCheck, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
+import { useSaving } from "../../../../lib/admin/use-saving";
 import { Paginated } from "../../../../lib/api/types";
 import { useAdminDialog } from "../../../../lib/admin/dialog-context";
+import { useAdminAuth } from "../../../../lib/auth/admin-auth-context";
 
 interface UserRow {
   id: string;
@@ -34,7 +36,7 @@ interface PermissionRow {
   description: string | null;
 }
 
-const EMPTY_USER = { email: "", password: "", firstName: "", lastName: "", roleId: "" };
+const EMPTY_USER = { email: "", password: "", firstName: "", lastName: "", roleId: "", isSuperadmin: false };
 
 export default function UsersAdminPage(): React.ReactNode {
   const [tab, setTab] = useState<"usuarios" | "roles">("usuarios");
@@ -64,19 +66,23 @@ function UsersTab(): React.ReactNode {
   const { data: roles } = useAdminGet<RoleRow[]>("/admin/roles");
   const request = useAdminRequest();
   const { confirm, notify } = useAdminDialog();
+  const { user: currentUser } = useAdminAuth();
+  const { pending, run } = useSaving();
   const [form, setForm] = useState(EMPTY_USER);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function submit(event: React.FormEvent): Promise<void> {
     event.preventDefault();
     setErrorMessage(null);
-    try {
-      await request("/admin/users", "POST", form);
-      setForm(EMPTY_USER);
-      await reload();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Error al crear el usuario");
-    }
+    await run("user", async () => {
+      try {
+        await request("/admin/users", "POST", form);
+        setForm(EMPTY_USER);
+        await reload();
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "Error al crear el usuario");
+      }
+    });
   }
 
   async function toggleActive(user: UserRow): Promise<void> {
@@ -164,8 +170,27 @@ function UsersTab(): React.ReactNode {
               ))}
             </select>
           </Field>
+          {currentUser?.isSuperadmin && (
+            <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+              <input
+                type="checkbox"
+                checked={form.isSuperadmin}
+                onChange={(event) => setForm({ ...form, isSuperadmin: event.target.checked })}
+                className="mt-0.5"
+              />
+              <span className="text-sm">
+                <span className="font-semibold text-amber-800">Crear como Superadministrador</span>
+                <span className="mt-0.5 block text-xs text-amber-700">
+                  Omite todos los permisos y no se puede eliminar ni desactivar. Concédelo solo a quien deba administrar la
+                  plataforma por completo.
+                </span>
+              </span>
+            </label>
+          )}
           {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
-          <Button type="submit">Crear usuario</Button>
+          <Button type="submit" loading={pending === "user"}>
+            Crear usuario
+          </Button>
         </form>
       </Card>
     </div>
@@ -177,6 +202,7 @@ function RolesTab(): React.ReactNode {
   const { data: permissions } = useAdminGet<PermissionRow[]>("/admin/roles/permissions");
   const request = useAdminRequest();
   const { confirm } = useAdminDialog();
+  const { pending, run } = useSaving();
   const [form, setForm] = useState<{ name: string; description: string; permissionKeys: string[] }>({ name: "", description: "", permissionKeys: [] });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -184,15 +210,17 @@ function RolesTab(): React.ReactNode {
   async function submit(event: React.FormEvent): Promise<void> {
     event.preventDefault();
     setErrorMessage(null);
-    try {
-      if (editingId) await request(`/admin/roles/${editingId}`, "PUT", form);
-      if (!editingId) await request("/admin/roles", "POST", form);
-      setForm({ name: "", description: "", permissionKeys: [] });
-      setEditingId(null);
-      await reload();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Error al guardar");
-    }
+    await run("role", async () => {
+      try {
+        if (editingId) await request(`/admin/roles/${editingId}`, "PUT", form);
+        if (!editingId) await request("/admin/roles", "POST", form);
+        setForm({ name: "", description: "", permissionKeys: [] });
+        setEditingId(null);
+        await reload();
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "Error al guardar");
+      }
+    });
   }
 
   function togglePermission(key: string): void {
@@ -295,7 +323,7 @@ function RolesTab(): React.ReactNode {
           </div>
           {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
           <div className="flex gap-2">
-            <Button type="submit">{editingId ? "Guardar" : "Crear rol"}</Button>
+            <Button type="submit" loading={pending === "role"}>{editingId ? "Guardar" : "Crear rol"}</Button>
             {editingId && (
               <Button
                 type="button"

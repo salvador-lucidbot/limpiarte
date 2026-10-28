@@ -75,7 +75,7 @@ export function AddToCartButton({
         type="button"
         onClick={() => void handleClick()}
         disabled={disabled}
-        className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-brand-500 px-6 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-brand-700 px-6 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {feedback === "added" ? <IconCheck size={20} /> : <IconCart size={20} />}
         {feedback === "added" ? "Agregado al carrito" : "Agregar al carrito"}

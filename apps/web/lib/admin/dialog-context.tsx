@@ -4,6 +4,7 @@ import { createContext, ReactNode, useCallback, useContext, useMemo, useState } 
 import { HoldButton } from "../../components/admin/hold-button";
 import { Button } from "../../components/admin/ui";
 import { IconAlertTriangle, IconCheckCircle, IconX } from "../../components/icons";
+import { Loader } from "../../components/loader";
 
 export interface ConfirmRequest {
   title: string;
@@ -126,7 +127,7 @@ export function AdminDialogProvider({ children }: { children: ReactNode }): Reac
 
               {status === "running" && (
                 <span className="flex items-center gap-2 text-sm text-stone-500">
-                  <span className="block h-4 w-4 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
+                  <Loader size="xs" inline label="Procesando" />
                   Procesando…
                 </span>
               )}

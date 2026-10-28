@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Badge, Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
 import { IconPencil, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
+import { useSaving } from "../../../../lib/admin/use-saving";
 import { formatCOP } from "../../../../lib/format";
 import { useAdminDialog } from "../../../../lib/admin/dialog-context";
 
@@ -33,6 +34,7 @@ function parseCities(text: string): { city: string; state: string }[] {
 export default function ShippingAdminPage(): React.ReactNode {
   const { data: zones, reload } = useAdminGet<ZoneRow[]>("/admin/shipping/zones");
   const request = useAdminRequest();
+  const { pending, run } = useSaving();
   const { confirm } = useAdminDialog();
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -125,7 +127,7 @@ export default function ShippingAdminPage(): React.ReactNode {
         </Card>
 
         <Card title={editingId ? "Editar zona" : "Nueva zona"}>
-          <form onSubmit={(event) => void submit(event)} className="space-y-3">
+          <form onSubmit={(event) => { event.preventDefault(); void run("form", () => submit(event)); }} className="space-y-3">
             <Field label="Nombre *">
               <input required placeholder="Bogotá y alrededores" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className={inputClass} />
             </Field>
@@ -152,7 +154,7 @@ export default function ShippingAdminPage(): React.ReactNode {
             </Field>
             {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
             <div className="flex gap-2">
-              <Button type="submit">{editingId ? "Guardar" : "Crear zona"}</Button>
+              <Button type="submit" loading={pending === "form"}>{editingId ? "Guardar" : "Crear zona"}</Button>
               {editingId && (
                 <Button
                   type="button"

@@ -35,14 +35,14 @@ export function StockAlertForm({ productId, productName }: { productId: string; 
         Avísame cuando llegue
       </p>
       <p className="mt-1 text-xs text-slate-500">Déjanos tu correo y te escribimos apenas repongamos este producto.</p>
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         <input
           type="email"
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="tucorreo@ejemplo.com"
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-400"
+          className="min-w-0 flex-[1_1_10rem] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-400"
         />
         <button
           type="submit"

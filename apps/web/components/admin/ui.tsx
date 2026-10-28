@@ -1,17 +1,20 @@
 "use client";
 
+import { Loader } from "../loader";
+
 interface CardProps {
+  id?: string;
   title?: string;
   actions?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }
 
-export function Card({ title, actions, children, className = "" }: CardProps): React.ReactNode {
+export function Card({ id, title, actions, children, className = "" }: CardProps): React.ReactNode {
   return (
-    <section className={`rounded-2xl border border-stone-200 bg-white ${className}`}>
+    <section id={id} className={`scroll-mt-20 rounded-2xl border border-stone-200 bg-white ${className}`}>
       {(title || actions) && (
-        <header className="flex items-center justify-between border-b border-stone-100 px-5 py-3">
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 px-5 py-3">
           {title && <h2 className="font-semibold text-navy-900">{title}</h2>}
           {actions}
         </header>
@@ -24,8 +27,13 @@ export function Card({ title, actions, children, className = "" }: CardProps): R
 export function Button({
   children,
   variant = "primary",
+  loading = false,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger" | "ghost" }): React.ReactNode {
+}: React.ComponentProps<"button"> & {
+  variant?: "primary" | "secondary" | "danger" | "ghost";
+  /** Mientras guarda muestra el logo animado y bloquea el botón para evitar envíos dobles. */
+  loading?: boolean;
+}): React.ReactNode {
   const variants: Record<string, string> = {
     primary: "bg-brand-600 text-white hover:bg-brand-700",
     secondary: "border border-stone-300 text-stone-700 hover:bg-stone-100",
@@ -35,8 +43,11 @@ export function Button({
   return (
     <button
       {...props}
-      className={`rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${variants[variant]} ${props.className ?? ""}`}
+      disabled={props.disabled || loading}
+      aria-busy={loading || undefined}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${variants[variant]} ${props.className ?? ""}`}
     >
+      {loading && <Loader size="xs" inline label="Guardando" className="shrink-0" />}
       {children}
     </button>
   );

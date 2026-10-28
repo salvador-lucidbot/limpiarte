@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button, Card, Field, inputClass } from "../../../../components/admin/ui";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
+import { useSaving } from "../../../../lib/admin/use-saving";
 
 interface SettingRow {
   key: string;
@@ -37,6 +38,7 @@ const EXPERIENCE_FIELDS: { key: string; label: string }[] = [
 
 const HOME_STATS_FIELDS: { key: string; label: string }[] = [
   { key: "home.stats.products", label: "Productos en catálogo" },
+  { key: "home.stats.categories", label: "Categorías disponibles" },
   { key: "home.stats.customers", label: "Usuarios registrados" },
   { key: "home.stats.shipments", label: "Envíos realizados" },
   { key: "home.stats.cities", label: "Ciudades con cobertura" },
@@ -62,6 +64,7 @@ export default function SettingsAdminPage(): React.ReactNode {
   const { data: settings, reload } = useAdminGet<SettingRow[]>("/admin/settings");
   const { data: templates, reload: reloadTemplates } = useAdminGet<EmailTemplateRow[]>("/admin/settings/email-templates");
   const request = useAdminRequest();
+  const { pending, run } = useSaving();
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
@@ -154,7 +157,7 @@ export default function SettingsAdminPage(): React.ReactNode {
           ))}
         </div>
         <div className="mt-4">
-          <Button onClick={() => void saveGroup(STORE_FIELDS, "store")}>Guardar datos de empresa</Button>
+          <Button loading={pending === "store"} onClick={() => void run("store", () => saveGroup(STORE_FIELDS, "store"))}>Guardar datos de empresa</Button>
         </div>
       </Card>
 
@@ -210,7 +213,7 @@ export default function SettingsAdminPage(): React.ReactNode {
           </div>
         </div>
         <div className="mt-4">
-          <Button onClick={() => void saveExperience()}>Guardar experiencia de compra</Button>
+          <Button loading={pending === "experience"} onClick={() => void run("experience", saveExperience)}>Guardar experiencia de compra</Button>
         </div>
       </Card>
 
@@ -233,7 +236,7 @@ export default function SettingsAdminPage(): React.ReactNode {
           ))}
         </div>
         <div className="mt-4">
-          <Button onClick={() => void saveGroup(HOME_STATS_FIELDS, "home")}>Guardar cifras de la portada</Button>
+          <Button loading={pending === "home"} onClick={() => void run("home", () => saveGroup(HOME_STATS_FIELDS, "home"))}>Guardar cifras de la portada</Button>
         </div>
       </Card>
 
@@ -250,12 +253,12 @@ export default function SettingsAdminPage(): React.ReactNode {
           ))}
         </div>
         <div className="mt-4">
-          <Button onClick={() => void saveGroup(TRACKING_FIELDS, "tracking")}>Guardar seguimiento</Button>
+          <Button loading={pending === "tracking"} onClick={() => void run("tracking", () => saveGroup(TRACKING_FIELDS, "tracking"))}>Guardar seguimiento</Button>
         </div>
       </Card>
 
       <Card title="Plantillas de correo transaccional">
-        <form onSubmit={(event) => void saveTemplate(event)} className="space-y-3">
+        <form onSubmit={(event) => { event.preventDefault(); void run("template", () => saveTemplate(event)); }} className="space-y-3">
           <Field label="Plantilla">
             <select value={templateKey} onChange={(event) => setTemplateKey(event.target.value)} className={inputClass}>
               {TEMPLATE_KEYS.map((key) => (
@@ -279,7 +282,7 @@ export default function SettingsAdminPage(): React.ReactNode {
           <p className="text-xs text-stone-400">
             Variables disponibles: {"{{name}}, {{orderNumber}}, {{total}}, {{itemsHtml}}, {{carrier}}, {{trackingNumber}}, {{status}}, {{code}}, {{verifyUrl}}, {{resetUrl}}, {{storeName}}"}
           </p>
-          <Button type="submit">Guardar plantilla</Button>
+          <Button type="submit" loading={pending === "template"}>Guardar plantilla</Button>
         </form>
       </Card>
     </div>

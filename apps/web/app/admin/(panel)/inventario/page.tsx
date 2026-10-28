@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
 import { IconAlertTriangle } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
+import { useSaving } from "../../../../lib/admin/use-saving";
 import { Paginated } from "../../../../lib/api/types";
 import { formatDate } from "../../../../lib/format";
 
@@ -39,6 +40,7 @@ export default function InventoryPage(): React.ReactNode {
   const { data: lowStock, reload: reloadLowStock } = useAdminGet<LowStockRow[]>("/admin/inventory/low-stock");
   const { data: movements, reload: reloadMovements } = useAdminGet<Paginated<MovementRow>>("/admin/inventory/movements?perPage=30");
   const request = useAdminRequest();
+  const { pending, run } = useSaving();
 
   const [adjust, setAdjust] = useState({ productId: "", quantityDelta: "", note: "" });
   const [message, setMessage] = useState<string | null>(null);
@@ -128,7 +130,7 @@ export default function InventoryPage(): React.ReactNode {
               <input value={adjust.note} onChange={(event) => setAdjust({ ...adjust, note: event.target.value })} className={inputClass} />
             </Field>
             {message && <p className="text-sm text-stone-600">{message}</p>}
-            <Button type="submit">Registrar ajuste</Button>
+            <Button type="submit" loading={pending === "form"}>Registrar ajuste</Button>
             <p className="text-xs text-stone-400">Copia el ID del producto desde su página de edición (URL).</p>
           </form>
         </Card>

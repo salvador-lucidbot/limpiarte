@@ -27,6 +27,11 @@ export class CreateUserDto {
 
   @IsString()
   roleId!: string;
+
+  /** Solo un Superadmin puede conceder este rango; para los demás el servicio lo rechaza. */
+  @IsOptional()
+  @IsBoolean()
+  isSuperadmin?: boolean;
 }
 
 export class UpdateUserDto {
@@ -51,6 +56,11 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  /** Solo un Superadmin puede conceder o retirar este rango. */
+  @IsOptional()
+  @IsBoolean()
+  isSuperadmin?: boolean;
 
   @IsOptional()
   @IsString()

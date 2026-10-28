@@ -1,10 +1,10 @@
 import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Post, Put } from "@nestjs/common";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { RequirePermissions } from "../../common/decorators/permissions.decorator";
-import { Brand, Category, Prisma, User } from "../../generated/prisma/client";
+import { Category, Prisma, User } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
-import { CreateBrandDto, CreateCategoryDto, UpdateCategoryDto } from "./dto/category.dto";
+import { CreateCategoryDto, UpdateCategoryDto } from "./dto/category.dto";
 
 type CategoryWithCount = Prisma.CategoryGetPayload<{ include: { _count: { select: { products: true } }; children: true } }>;
 
@@ -82,26 +82,6 @@ export class CategoriesController {
     await this.prisma.category.delete({ where: { id } });
     await this.auditService.log({ userId: actor.id, action: "category.deleted", entity: "Category", entityId: id });
 
-    return { deleted: true };
-  }
-
-  @Get("brands")
-  listBrands(): Promise<Brand[]> {
-    return this.prisma.brand.findMany({ orderBy: { name: "asc" } });
-  }
-
-  @Post("brands")
-  createBrand(@Body() dto: CreateBrandDto): Promise<Brand> {
-    return this.prisma.brand.create({ data: { name: dto.name, slug: dto.slug } });
-  }
-
-  @Delete("brands/:id")
-  async deleteBrand(@Param("id") id: string): Promise<{ deleted: boolean }> {
-    const brand = await this.prisma.brand.findUnique({ where: { id }, include: { _count: { select: { products: true } } } });
-    if (!brand) throw new NotFoundException("Marca no encontrada");
-    if (brand._count.products > 0) throw new BadRequestException("La marca tiene productos asignados");
-
-    await this.prisma.brand.delete({ where: { id } });
     return { deleted: true };
   }
 }

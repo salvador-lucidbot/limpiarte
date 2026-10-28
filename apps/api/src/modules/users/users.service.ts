@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { hash } from "bcryptjs";
 import { PaginatedResult, paginate, skipTake } from "../../common/pagination/pagination.dto";
 import { Prisma, User } from "../../generated/prisma/client";
@@ -50,7 +50,11 @@ export class UsersService {
     return paginate(data.map(toSafeUser), total, query.page, query.perPage);
   }
 
-  async create(dto: CreateUserDto, actorId: string): Promise<SafeUser> {
+  async create(dto: CreateUserDto, actor: { id: string; isSuperadmin: boolean }): Promise<SafeUser> {
+    if (dto.isSuperadmin && !actor.isSuperadmin) {
+      throw new ForbiddenException("Solo un Superadmin puede crear otro Superadmin");
+    }
+
     const activeCount = await this.prisma.user.count({
       where: { isActive: true, isSuperadmin: false, deletedAt: null }
     });
@@ -68,21 +72,40 @@ export class UsersService {
         firstName: dto.firstName,
         lastName: dto.lastName,
         phone: dto.phone,
-        roleId: dto.roleId
+        roleId: dto.roleId,
+        isSuperadmin: dto.isSuperadmin === true
       },
       include: { role: true }
     });
 
-    await this.auditService.log({ userId: actorId, action: "user.created", entity: "User", entityId: user.id });
+    await this.auditService.log({
+      userId: actor.id,
+      action: dto.isSuperadmin ? "user.created_superadmin" : "user.created",
+      entity: "User",
+      entityId: user.id
+    });
 
     return toSafeUser(user);
   }
 
-  async update(id: string, dto: UpdateUserDto, actorId: string): Promise<SafeUser> {
+  async update(id: string, dto: UpdateUserDto, actor: { id: string; isSuperadmin: boolean }): Promise<SafeUser> {
     const existing = await this.prisma.user.findFirst({ where: { id, deletedAt: null } });
     if (!existing) throw new NotFoundException("Usuario no encontrado");
     if (existing.isSuperadmin && dto.isActive === false) {
       throw new BadRequestException("No se puede desactivar la cuenta Superadmin");
+    }
+
+    const changesRank = dto.isSuperadmin !== undefined && dto.isSuperadmin !== existing.isSuperadmin;
+    if (changesRank && !actor.isSuperadmin) {
+      throw new ForbiddenException("Solo un Superadmin puede cambiar este rango");
+    }
+
+    // Retirar el rango al último Superadmin dejaría el panel sin nadie que pueda devolverlo.
+    if (changesRank && dto.isSuperadmin === false) {
+      const remaining = await this.prisma.user.count({
+        where: { isSuperadmin: true, isActive: true, deletedAt: null, id: { not: id } }
+      });
+      if (remaining === 0) throw new BadRequestException("Debe quedar al menos un Superadmin activo");
     }
 
     const user = await this.prisma.user.update({
@@ -93,12 +116,19 @@ export class UsersService {
         phone: dto.phone,
         roleId: dto.roleId,
         isActive: dto.isActive,
+        isSuperadmin: changesRank ? dto.isSuperadmin : undefined,
         passwordHash: dto.password ? await hash(dto.password, 10) : undefined
       },
       include: { role: true }
     });
 
-    await this.auditService.log({ userId: actorId, action: "user.updated", entity: "User", entityId: id });
+    await this.auditService.log({
+      userId: actor.id,
+      action: changesRank ? "user.rank_changed" : "user.updated",
+      entity: "User",
+      entityId: id,
+      metadata: changesRank ? { isSuperadmin: dto.isSuperadmin } : undefined
+    });
 
     return toSafeUser(user);
   }

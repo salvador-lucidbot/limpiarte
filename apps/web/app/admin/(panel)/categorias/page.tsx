@@ -1,10 +1,12 @@
 ﻿"use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
-import { IconCheckCircle, IconPause, IconPencil, IconPlay, IconTrash } from "../../../../components/icons";
+import { IconArrowRight, IconCheckCircle, IconPause, IconPencil, IconPlay, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
-import { slugify } from "../../../../components/admin/product-form";
+import { useSaving } from "../../../../lib/admin/use-saving";
+import { slugify } from "../../../../components/admin/slugify";
 import { useAdminDialog } from "../../../../lib/admin/dialog-context";
 import { ImageUrlField } from "../../../../components/admin/image-upload";
 
@@ -20,23 +22,17 @@ interface CategoryRow {
   _count: { products: number };
 }
 
-interface BrandRow {
-  id: string;
-  name: string;
-  slug: string;
-}
-
 const EMPTY_FORM = { name: "", slug: "", parentId: "", bannerUrl: "", position: "0", description: "" };
 
 export default function CategoriesAdminPage(): React.ReactNode {
   const { data: categories, reload } = useAdminGet<CategoryRow[]>("/admin/catalog/categories");
-  const { data: brands, reload: reloadBrands } = useAdminGet<BrandRow[]>("/admin/catalog/brands");
+  const { data: brands } = useAdminGet<{ id: string }[]>("/admin/catalog/brands");
   const request = useAdminRequest();
-  const { confirm, notify } = useAdminDialog();
+  const { pending, run } = useSaving();
+  const { confirm } = useAdminDialog();
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [brandName, setBrandName] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function submit(event: React.FormEvent): Promise<void> {
@@ -80,17 +76,9 @@ export default function CategoriesAdminPage(): React.ReactNode {
     await reload();
   }
 
-  async function addBrand(event: React.FormEvent): Promise<void> {
-    event.preventDefault();
-    if (!brandName.trim()) return;
-    await request("/admin/catalog/brands", "POST", { name: brandName.trim(), slug: slugify(brandName) });
-    setBrandName("");
-    await reloadBrands();
-  }
-
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-navy-900">Categorías y marcas</h1>
+      <h1 className="text-2xl font-bold text-navy-900">Categorías</h1>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <Card title="Categorías">
@@ -147,7 +135,7 @@ export default function CategoriesAdminPage(): React.ReactNode {
 
         <div className="space-y-6">
           <Card title={editingId ? "Editar categoría" : "Nueva categoría"}>
-            <form onSubmit={(event) => void submit(event)} className="space-y-3">
+            <form onSubmit={(event) => { event.preventDefault(); void run("form", () => submit(event)); }} className="space-y-3">
               <Field label="Nombre *">
                 <input
                   required
@@ -191,7 +179,7 @@ export default function CategoriesAdminPage(): React.ReactNode {
               </Field>
               {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
               <div className="flex gap-2">
-                <Button type="submit">{editingId ? "Guardar" : "Crear"}</Button>
+                <Button type="submit" loading={pending === "form"}>{editingId ? "Guardar" : "Crear"}</Button>
                 {editingId && (
                   <Button
                     type="button"
@@ -209,31 +197,17 @@ export default function CategoriesAdminPage(): React.ReactNode {
           </Card>
 
           <Card title="Marcas">
-            <ul className="mb-3 space-y-1 text-sm">
-              {(brands ?? []).map((brand) => (
-                <li key={brand.id} className="flex items-center justify-between rounded-lg px-2 py-1 hover:bg-stone-50">
-                  {brand.name}
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      void request(`/admin/catalog/brands/${brand.id}`, "DELETE")
-                        .then(reloadBrands)
-                        .catch((error: unknown) =>
-                            notify({ title: "No se pudo guardar", description: error instanceof Error ? error.message : "Error", tone: "error" })
-                          );
-                    }}
-                  >
-                    <IconTrash size={15} />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-            <form onSubmit={(event) => void addBrand(event)} className="flex gap-2">
-              <input placeholder="Nueva marca" value={brandName} onChange={(event) => setBrandName(event.target.value)} className={inputClass} />
-              <Button type="submit" variant="secondary">
-                +
-              </Button>
-            </form>
+            <p className="text-sm text-stone-500">
+              {brands ? `${brands.length} marca(s) registradas. ` : ""}El logo, el lema, el banner, la descripción y el contenido visual de cada marca se
+              editan en su propia sección.
+            </p>
+            <Link
+              href="/admin/marcas"
+              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100"
+            >
+              Administrar marcas
+              <IconArrowRight size={15} />
+            </Link>
           </Card>
         </div>
       </div>

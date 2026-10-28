@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { useCustomerAuth } from "../../../../lib/auth/customer-auth-context";
 
-export default function CustomerLoginPage(): React.ReactNode {
+function LoginForm(): React.ReactNode {
   const { login } = useCustomerAuth();
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -67,11 +68,22 @@ export default function CustomerLoginPage(): React.ReactNode {
         </p>
         <p>
           ¿No tienes cuenta?{" "}
-          <Link href="/cuenta/registro" className="font-semibold text-brand-700 hover:underline">
+          <Link
+            href={email ? `/cuenta/registro?email=${encodeURIComponent(email)}` : "/cuenta/registro"}
+            className="font-semibold text-brand-700 hover:underline"
+          >
             Regístrate
           </Link>
         </p>
       </div>
     </div>
+  );
+}
+
+export default function CustomerLoginPage(): React.ReactNode {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

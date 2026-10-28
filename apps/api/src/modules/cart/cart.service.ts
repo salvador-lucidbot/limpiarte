@@ -20,6 +20,7 @@ export interface CartItemView {
   lineTotal: number;
   availableStock: number;
   allowBackorder: boolean;
+  unavailable: boolean;
 }
 
 export interface CartSuggestion {
@@ -252,7 +253,8 @@ export class CartService {
         quantity: item.quantity,
         lineTotal: Math.round(pricing.price * item.quantity * 100) / 100,
         availableStock: item.variant ? item.variant.stock : item.product.stock,
-        allowBackorder: item.product.allowBackorder
+        allowBackorder: item.product.allowBackorder,
+        unavailable: this.isUnavailable(item)
       };
     });
 
@@ -431,6 +433,11 @@ export class CartService {
       where: { cartId, productId, variantId },
       select: { id: true, quantity: true }
     });
+  }
+
+  private isUnavailable(item: CartWithItems["items"][number]): boolean {
+    if (item.product.deletedAt !== null || item.product.status !== ProductStatus.ACTIVE) return true;
+    return item.variant !== null && !item.variant.isActive;
   }
 
   private assertStock(allowBackorder: boolean, availableStock: number, requestedQuantity: number): void {

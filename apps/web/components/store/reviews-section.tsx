@@ -155,7 +155,7 @@ export function ReviewsSection({ productId, productSlug }: ReviewsSectionProps):
 
           <ul className="space-y-3">
             {data.data.map((review) => (
-              <li key={review.id} className="rounded-2xl border border-slate-200 bg-white p-5">
+              <li key={review.id} className="rounded-2xl border border-slate-200 bg-white p-5 wrap-anywhere">
                 <div className="flex flex-wrap items-center gap-2.5">
                   <RatingStars rating={review.rating} />
                   {review.title && <p className="font-semibold text-navy-900">{review.title}</p>}

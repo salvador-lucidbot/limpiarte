@@ -113,7 +113,7 @@ export function QuestionsSection({ productId, productSlug }: QuestionsSectionPro
       ) : (
         <ul className="space-y-3">
           {questions.map((entry) => (
-            <li key={entry.id} className="rounded-2xl border border-slate-200 bg-white p-5">
+            <li key={entry.id} className="rounded-2xl border border-slate-200 bg-white p-5 wrap-break-word">
               <p className="text-sm font-semibold text-navy-900">{entry.question}</p>
               <p className="mt-0.5 text-xs text-slate-400">{entry.authorName}</p>
               {entry.answer && (

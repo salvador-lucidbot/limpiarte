@@ -9,13 +9,24 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
   Matches,
+  Max,
+  MaxLength,
   Min,
   MinLength,
   ValidateNested
 } from "class-validator";
-import { ProductRelationType, ProductStatus } from "../../../generated/prisma/enums";
+import { ProductDocumentKind, ProductRelationType, ProductSpecGroup, ProductStatus } from "../../../generated/prisma/enums";
 import { PaginationDto } from "../../../common/pagination/pagination.dto";
+import { ContentBlockDto, HTTP_URL_OPTIONS, MAX_CONTENT_BLOCKS, MAX_URL_LENGTH } from "./content-block.dto";
+
+export const MAX_HIGHLIGHTS = 10;
+export const MAX_HIGHLIGHT_LENGTH = 300;
+export const MAX_SPECS = 60;
+export const MAX_VIDEOS = 8;
+export const MAX_DOCUMENTS = 10;
+export const MAX_RELATIONS = 40;
 
 export class ProductImageDto {
   @IsString()
@@ -32,12 +43,29 @@ export class ProductImageDto {
 }
 
 export class ProductOptionValueDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @IsString()
   @MinLength(1)
   value!: string;
+
+  @IsOptional()
+  @IsUrl(HTTP_URL_OPTIONS, { message: "La miniatura del valor debe ser una URL http(s) válida" })
+  @MaxLength(MAX_URL_LENGTH)
+  swatchImageUrl?: string | null;
+
+  @IsOptional()
+  @Matches(/^#[0-9a-fA-F]{6}$/, { message: "El color debe tener el formato #RRGGBB" })
+  swatchHex?: string | null;
 }
 
 export class ProductOptionDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @IsString()
   @MinLength(1)
   name!: string;
@@ -49,42 +77,52 @@ export class ProductOptionDto {
 }
 
 export class ProductVariantDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @IsArray()
   @IsString({ each: true })
   optionValues!: string[];
 
   @IsOptional()
   @IsString()
-  sku?: string;
+  sku?: string | null;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  price?: number;
+  price?: number | null;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  compareAtPrice?: number;
+  compareAtPrice?: number | null;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  stock?: number;
+  stock?: number | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  stockBaseline?: number | null;
 
   @IsOptional()
   @IsString()
-  imageUrl?: string;
+  @MaxLength(191)
+  imageUrl?: string | null;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  weightKg?: number;
+  weightKg?: number | null;
 
   @IsOptional()
   @IsBoolean()
-  isActive?: boolean;
+  isActive?: boolean | null;
 }
 
 export class ProductFaqDto {
@@ -105,6 +143,70 @@ export class ProductRelationDto {
   type!: ProductRelationType;
 }
 
+export class ProductSpecDto {
+  @IsEnum(ProductSpecGroup)
+  group!: ProductSpecGroup;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  label!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  value!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isKey?: boolean;
+}
+
+export class ProductVideoDto {
+  @IsUrl(HTTP_URL_OPTIONS, { message: "El video debe ser una URL http(s) válida" })
+  @MaxLength(MAX_URL_LENGTH)
+  @Matches(/\.mp4(\?.*)?$/i, { message: "El video debe ser un archivo MP4" })
+  url!: string;
+
+  @IsOptional()
+  @IsUrl(HTTP_URL_OPTIONS, { message: "El póster debe ser una URL http(s) válida" })
+  @MaxLength(MAX_URL_LENGTH)
+  posterUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  title?: string | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(36_000)
+  durationSeconds?: number | null;
+}
+
+export class ProductDocumentDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(160)
+  title!: string;
+
+  @IsUrl(HTTP_URL_OPTIONS, { message: "El documento debe ser una URL http(s) válida" })
+  @MaxLength(MAX_URL_LENGTH)
+  @Matches(/\.pdf(\?.*)?$/i, { message: "El documento debe ser un archivo PDF" })
+  url!: string;
+
+  @IsEnum(ProductDocumentKind)
+  kind!: ProductDocumentKind;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  sizeBytes?: number | null;
+}
+
 export class CreateProductDto {
   @IsString()
   @MinLength(2)
@@ -116,31 +218,31 @@ export class CreateProductDto {
 
   @IsOptional()
   @IsString()
-  sku?: string;
+  sku?: string | null;
 
   @IsOptional()
   @IsString()
-  description?: string;
+  description?: string | null;
 
   @IsOptional()
   @IsString()
-  technicalContent?: string;
+  technicalContent?: string | null;
 
   @IsOptional()
   @IsString()
-  presentation?: string;
+  presentation?: string | null;
 
   @IsOptional()
   @IsString()
-  performance?: string;
+  performance?: string | null;
 
   @IsOptional()
   @IsString()
-  usageInstructions?: string;
+  usageInstructions?: string | null;
 
   @IsOptional()
   @IsString()
-  precautions?: string;
+  precautions?: string | null;
 
   @IsOptional()
   @IsEnum(ProductStatus)
@@ -190,6 +292,11 @@ export class CreateProductDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
+  stockBaseline?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   @Min(0)
   lowStockThreshold?: number;
 
@@ -200,22 +307,22 @@ export class CreateProductDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  weightKg?: number;
+  weightKg?: number | null;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  lengthCm?: number;
+  lengthCm?: number | null;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  widthCm?: number;
+  widthCm?: number | null;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  heightCm?: number;
+  heightCm?: number | null;
 
   @IsOptional()
   @IsBoolean()
@@ -223,11 +330,23 @@ export class CreateProductDto {
 
   @IsOptional()
   @IsString()
-  seoTitle?: string;
+  seoTitle?: string | null;
 
   @IsOptional()
   @IsString()
-  seoDescription?: string;
+  seoDescription?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_HIGHLIGHTS)
+  @IsString({ each: true })
+  @MaxLength(MAX_HIGHLIGHT_LENGTH, { each: true })
+  highlights?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  warrantyText?: string | null;
 
   @IsOptional()
   @IsArray()
@@ -265,7 +384,36 @@ export class CreateProductDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ProductRelationDto)
+  @ArrayMaxSize(MAX_RELATIONS)
   relations?: ProductRelationDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductSpecDto)
+  @ArrayMaxSize(MAX_SPECS)
+  specs?: ProductSpecDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductVideoDto)
+  @ArrayMaxSize(MAX_VIDEOS)
+  videos?: ProductVideoDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductDocumentDto)
+  @ArrayMaxSize(MAX_DOCUMENTS)
+  documents?: ProductDocumentDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ContentBlockDto)
+  @ArrayMaxSize(MAX_CONTENT_BLOCKS)
+  contentBlocks?: ContentBlockDto[];
 }
 
 export class UpdateProductDto extends CreateProductDto {
@@ -283,6 +431,12 @@ export class UpdateProductDto extends CreateProductDto {
   @IsNumber()
   @Min(0)
   declare basePrice: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  expectedVersion?: number;
 }
 
 export class AdminProductQueryDto extends PaginationDto {

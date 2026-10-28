@@ -100,6 +100,7 @@ export function ImageUrlField({ label, value, onChange, required = false, hint }
           <input
             required={required}
             value={value}
+            aria-label={label}
             placeholder="Sube un archivo o pega una URL"
             onChange={(event) => onChange(event.target.value)}
             className={inputClass}

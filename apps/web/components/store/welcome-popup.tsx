@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api/client";
 import { WelcomePopupSettings } from "../../lib/api/types";
@@ -68,8 +69,15 @@ export function WelcomePopup({ settings }: { settings: WelcomePopupSettings }): 
                   {settings.couponCode}
                 </p>
               )}
-              <button type="button" onClick={dismiss} className="mt-5 w-full rounded-lg bg-brand-500 px-6 py-2.5 font-semibold text-white transition hover:bg-brand-600">
-                Ir a comprar
+              <Link
+                href={`/cuenta/registro?email=${encodeURIComponent(email)}`}
+                onClick={dismiss}
+                className="mt-5 block w-full rounded-lg bg-brand-500 px-6 py-2.5 text-center font-semibold text-white transition hover:bg-brand-600"
+              >
+                Crear mi cuenta
+              </Link>
+              <button type="button" onClick={dismiss} className="mt-2 w-full text-center text-xs text-slate-400 transition hover:text-slate-600">
+                Seguir viendo la tienda
               </button>
             </div>
           ) : (

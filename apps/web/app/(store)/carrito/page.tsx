@@ -95,6 +95,9 @@ export default function CartPage(): React.ReactNode {
                       {item.name}
                     </Link>
                     {item.variantLabel && <p className="text-sm text-stone-500">{item.variantLabel}</p>}
+                    {item.unavailable && (
+                      <p className="mt-1 text-sm font-semibold text-red-700">Ya no está disponible: quítalo del carrito para continuar.</p>
+                    )}
                   </div>
                   <button
                     type="button"

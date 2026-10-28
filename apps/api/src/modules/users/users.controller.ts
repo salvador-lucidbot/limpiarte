@@ -17,12 +17,12 @@ export class UsersController {
 
   @Post()
   create(@Body() dto: CreateUserDto, @CurrentUser() actor: User): ReturnType<UsersService["create"]> {
-    return this.usersService.create(dto, actor.id);
+    return this.usersService.create(dto, actor);
   }
 
   @Put(":id")
   update(@Param("id") id: string, @Body() dto: UpdateUserDto, @CurrentUser() actor: User): ReturnType<UsersService["update"]> {
-    return this.usersService.update(id, dto, actor.id);
+    return this.usersService.update(id, dto, actor);
   }
 
   @Delete(":id")

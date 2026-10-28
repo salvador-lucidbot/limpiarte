@@ -62,6 +62,7 @@ function CategoryIcon({ slug, size = 26 }: { slug: string; size?: number }): Rea
  */
 const STAT_TILES: { id: string; setting: string; real: keyof StorefrontStats; label: string; short: string }[] = [
   { id: "products", setting: "home.stats.products", real: "products", label: "Productos en catálogo", short: "Productos" },
+  { id: "categories", setting: "home.stats.categories", real: "categories", label: "Categorías disponibles", short: "Categorías" },
   { id: "customers", setting: "home.stats.customers", real: "customers", label: "Usuarios registrados", short: "Usuarios" },
   { id: "shipments", setting: "home.stats.shipments", real: "ordersDelivered", label: "Envíos realizados", short: "Envíos" },
   { id: "cities", setting: "home.stats.cities", real: "cities", label: "Ciudades con cobertura", short: "Ciudades" },

@@ -4,9 +4,16 @@ import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
+import type { IncomingMessage, ServerResponse } from "http";
 import { AppModule } from "./app.module";
 import { resolveUploadsDirectory } from "./modules/uploads/upload-storage.service";
 
+type UploadsStaticOptions = NonNullable<Parameters<NestExpressApplication["useStaticAssets"]>[1]> & { acceptRanges: boolean };
+
+const CATALOG_ADMIN_JSON_LIMIT = "1mb";
+const DEFAULT_JSON_LIMIT = "100kb";
+const CATALOG_ADMIN_PATH = "/api/v1/admin/catalog/";
+const JSON_CONTENT_TYPE = /^application\/json\b/i;
 const PRODUCTION_REQUIRED = ["DATABASE_URL", "JWT_SECRET", "ENCRYPTION_KEY", "CORS_ORIGINS", "PUBLIC_BASE_URL", "STOREFRONT_URL"];
 const INSECURE_DEFAULTS = ["development-only-jwt-secret", "development-only-encryption-key", "change-me", "32-characters-random-key-change!"];
 
@@ -31,28 +38,49 @@ function assertProductionEnv(): void {
   }
 }
 
+function isJsonRequest(request: IncomingMessage): boolean {
+  return JSON_CONTENT_TYPE.test((request.headers["content-type"] ?? "").trim());
+}
+
+function isCatalogAdminRequest(request: IncomingMessage): boolean {
+  if (!request.headers.authorization) return false;
+  return (request.url ?? "").startsWith(CATALOG_ADMIN_PATH);
+}
+
 async function bootstrap(): Promise<void> {
   assertProductionEnv();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
 
   app.use(helmet());
+  app.useBodyParser("json", {
+    limit: CATALOG_ADMIN_JSON_LIMIT,
+    type: (request: IncomingMessage) => isJsonRequest(request) && isCatalogAdminRequest(request)
+  });
+  app.useBodyParser("json", {
+    limit: DEFAULT_JSON_LIMIT,
+    type: (request: IncomingMessage) => isJsonRequest(request) && !isCatalogAdminRequest(request)
+  });
   app.setGlobalPrefix("api/v1");
   app.enableCors({
     origin: (process.env.CORS_ORIGINS ?? "http://localhost:3000").split(",").map((origin) => origin.trim()),
     credentials: true
   });
 
-  app.useStaticAssets(resolveUploadsDirectory(), {
+  const uploadsStaticOptions: UploadsStaticOptions = {
     prefix: "/uploads",
     index: false,
     redirect: false,
+    dotfiles: "ignore",
+    acceptRanges: true,
     maxAge: "30d",
-    setHeaders: (response) => {
+    setHeaders: (response: ServerResponse, filePath: string) => {
       response.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
       response.setHeader("X-Content-Type-Options", "nosniff");
+      if (filePath.toLowerCase().endsWith(".pdf")) response.removeHeader("Content-Security-Policy");
     }
-  });
+  };
+  app.useStaticAssets(resolveUploadsDirectory(), uploadsStaticOptions);
 
   app.useGlobalPipes(
     new ValidationPipe({

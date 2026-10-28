@@ -66,10 +66,103 @@ export interface CatalogListing extends Paginated<ProductCard> {
   facets: CatalogFacets;
 }
 
+export type ProductSpecGroup = "DETALLES" | "MEDIDAS" | "ESTILO" | "CARACTERISTICAS" | "MATERIALES_CUIDADO" | "GARANTIA";
+
+export type ProductDocumentKind = "FICHA_TECNICA" | "HOJA_SEGURIDAD" | "MANUAL" | "CERTIFICADO" | "OTRO";
+
+export type ContentBlockLayout = "IMAGEN_COMPLETA" | "IMAGEN_IZQUIERDA" | "IMAGEN_DERECHA" | "GRILLA";
+
+export type ContentBlockSource = "PRODUCT" | "BRAND";
+
+export type ProductRelationType = "RELATED" | "COMPLEMENTARY" | "CROSS_SELL";
+
+export type ProductStatus = "DRAFT" | "ACTIVE" | "INACTIVE";
+
+export type UploadKind = "image" | "document" | "video";
+
+export const PRODUCT_SPEC_GROUPS: ProductSpecGroup[] = [
+  "DETALLES",
+  "MEDIDAS",
+  "ESTILO",
+  "CARACTERISTICAS",
+  "MATERIALES_CUIDADO",
+  "GARANTIA"
+];
+
+export const PRODUCT_SPEC_GROUP_LABELS: Record<ProductSpecGroup, string> = {
+  DETALLES: "Detalles del producto",
+  MEDIDAS: "Medidas",
+  ESTILO: "Estilo",
+  CARACTERISTICAS: "Características y especificaciones",
+  MATERIALES_CUIDADO: "Materiales y cuidado",
+  GARANTIA: "Garantía y asistencia"
+};
+
+export const PRODUCT_DOCUMENT_KIND_LABELS: Record<ProductDocumentKind, string> = {
+  FICHA_TECNICA: "Ficha técnica",
+  HOJA_SEGURIDAD: "Hoja de seguridad (FDS)",
+  MANUAL: "Manual",
+  CERTIFICADO: "Certificado",
+  OTRO: "Otro"
+};
+
+export const CONTENT_BLOCK_LAYOUT_LABELS: Record<ContentBlockLayout, string> = {
+  IMAGEN_COMPLETA: "Imagen a todo el ancho",
+  IMAGEN_IZQUIERDA: "Imagen a la izquierda y texto",
+  IMAGEN_DERECHA: "Imagen a la derecha y texto",
+  GRILLA: "Celda de grilla"
+};
+
+export const PRODUCT_RELATION_TYPE_LABELS: Record<ProductRelationType, string> = {
+  RELATED: "Relacionado",
+  COMPLEMENTARY: "Complementario",
+  CROSS_SELL: "Venta cruzada"
+};
+
+export const PRODUCT_CONTENT_LIMITS = {
+  highlights: 10,
+  highlightLength: 300,
+  specs: 60,
+  specLabelLength: 120,
+  specValueLength: 2000,
+  videos: 8,
+  documents: 10,
+  contentBlocks: 12,
+  contentBlockBodyLength: 5000,
+  relations: 40,
+  images: 12,
+  options: 3,
+  variants: 100,
+  warrantyLength: 5000,
+  titleLength: 160,
+  urlLength: 500
+} as const;
+
+export const UPLOAD_RULES: Record<UploadKind, { endpoint: string; maxBytes: number; accept: string }> = {
+  image: { endpoint: "/admin/uploads", maxBytes: 5 * 1024 * 1024, accept: "image/jpeg,image/png,image/webp,image/avif" },
+  document: { endpoint: "/admin/uploads/documents", maxBytes: 10 * 1024 * 1024, accept: "application/pdf,.pdf" },
+  video: { endpoint: "/admin/uploads/videos", maxBytes: 50 * 1024 * 1024, accept: "video/mp4,.mp4" }
+};
+
+export interface UploadedFileResult {
+  fileName: string;
+  url: string;
+  size: number;
+  mimeType: string;
+  kind: UploadKind;
+}
+
+export interface ProductOptionValueView {
+  id: string;
+  value: string;
+  swatchImageUrl: string | null;
+  swatchHex: string | null;
+}
+
 export interface ProductOptionView {
   id: string;
   name: string;
-  values: { id: string; value: string }[];
+  values: ProductOptionValueView[];
 }
 
 export interface ProductVariantView {
@@ -79,8 +172,64 @@ export interface ProductVariantView {
   compareAtPrice: number | null;
   stock: number;
   imageUrl: string | null;
+  weightKg: number | null;
   optionValueIds: string[];
   label: string;
+}
+
+export interface ProductBrandView {
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  bannerUrl: string | null;
+  description: string | null;
+  tagline: string | null;
+}
+
+export interface CategoryCrumb {
+  name: string;
+  slug: string;
+}
+
+export interface ProductDimensions {
+  lengthCm: number | null;
+  widthCm: number | null;
+  heightCm: number | null;
+  weightKg: number | null;
+}
+
+export interface ProductSpecView {
+  group: ProductSpecGroup;
+  label: string;
+  value: string;
+  isKey: boolean;
+}
+
+export interface ProductVideoView {
+  id: string;
+  url: string;
+  posterUrl: string | null;
+  title: string | null;
+  durationSeconds: number | null;
+  createdAt: string | null;
+}
+
+export interface ProductDocumentView {
+  id: string;
+  title: string;
+  url: string;
+  kind: ProductDocumentKind;
+  sizeBytes: number | null;
+}
+
+export interface ContentBlockView {
+  id: string;
+  source: ContentBlockSource;
+  layout: ContentBlockLayout;
+  title: string | null;
+  body: string | null;
+  imageUrl: string;
+  imageAlt: string | null;
 }
 
 export interface ProductDetail {
@@ -97,23 +246,351 @@ export interface ProductDetail {
     precautions: string | null;
   };
   brandName: string | null;
-  category: { name: string; slug: string } | null;
+  brand: ProductBrandView | null;
+  category: CategoryCrumb | null;
+  categoryPath: CategoryCrumb[];
   price: number;
   compareAtPrice: number | null;
   onPromo: boolean;
+  promoEndsAt: string | null;
+  taxRatePercent: number | null;
   stock: number;
   inStock: boolean;
   lowStock: boolean;
   allowBackorder: boolean;
+  isBestSeller: boolean;
+  isNew: boolean;
   rating: number | null;
   reviewCount: number;
+  dimensions: ProductDimensions | null;
+  highlights: string[];
+  warrantyText: string | null;
   images: { url: string; alt: string | null }[];
+  videos: ProductVideoView[];
+  documents: ProductDocumentView[];
+  specs: ProductSpecView[];
+  contentBlocks: ContentBlockView[];
   options: ProductOptionView[];
   variants: ProductVariantView[];
   faqs: { question: string; answer: string }[];
   tags: string[];
-  related: { type: string; product: ProductCard }[];
+  related: { type: ProductRelationType; product: ProductCard }[];
   seo: { title: string; description: string | null };
+}
+
+export interface StoreBrandView {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  bannerUrl: string | null;
+  description: string | null;
+  tagline: string | null;
+}
+
+export interface CategoryBrandView {
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  tagline: string | null;
+  productCount: number;
+}
+
+export interface ProductRecommendations {
+  relatedOffers: ProductCard[];
+  related: ProductCard[];
+  categoryBrands: CategoryBrandView[];
+}
+
+export interface ProductImageInput {
+  url: string;
+  alt?: string;
+  position?: number;
+}
+
+export interface ProductOptionValueInput {
+  id?: string;
+  value: string;
+  swatchImageUrl?: string | null;
+  swatchHex?: string | null;
+}
+
+export interface ProductOptionInput {
+  id?: string;
+  name: string;
+  values: ProductOptionValueInput[];
+}
+
+export interface ProductVariantInput {
+  id?: string;
+  optionValues: string[];
+  sku?: string | null;
+  price?: number | null;
+  compareAtPrice?: number | null;
+  stock?: number | null;
+  stockBaseline?: number | null;
+  imageUrl?: string | null;
+  weightKg?: number | null;
+  isActive?: boolean | null;
+}
+
+export interface ProductSpecInput {
+  group: ProductSpecGroup;
+  label: string;
+  value: string;
+  isKey?: boolean;
+}
+
+export interface ProductVideoInput {
+  url: string;
+  posterUrl?: string | null;
+  title?: string | null;
+  durationSeconds?: number | null;
+}
+
+export interface ProductDocumentInput {
+  title: string;
+  url: string;
+  kind: ProductDocumentKind;
+  sizeBytes?: number | null;
+}
+
+export interface ContentBlockInput {
+  layout: ContentBlockLayout;
+  title?: string | null;
+  body?: string | null;
+  imageUrl: string;
+  imageAlt?: string | null;
+}
+
+export interface ProductRelationInput {
+  relatedProductId: string;
+  type: ProductRelationType;
+}
+
+export interface ProductFaqInput {
+  question: string;
+  answer: string;
+}
+
+export interface AdminProductPayload {
+  name: string;
+  slug: string;
+  sku?: string | null;
+  description?: string | null;
+  technicalContent?: string | null;
+  presentation?: string | null;
+  performance?: string | null;
+  usageInstructions?: string | null;
+  precautions?: string | null;
+  status?: ProductStatus;
+  brandId?: string;
+  categoryId?: string;
+  basePrice: number;
+  compareAtPrice?: number;
+  promoPrice?: number;
+  promoStartsAt?: string;
+  promoEndsAt?: string;
+  taxRatePercent?: number;
+  stock?: number;
+  stockBaseline?: number;
+  expectedVersion?: number;
+  lowStockThreshold?: number;
+  allowBackorder?: boolean;
+  weightKg?: number | null;
+  lengthCm?: number | null;
+  widthCm?: number | null;
+  heightCm?: number | null;
+  isFeatured?: boolean;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  highlights?: string[];
+  warrantyText?: string | null;
+  tags?: string[];
+  images?: ProductImageInput[];
+  options?: ProductOptionInput[];
+  variants?: ProductVariantInput[];
+  faqs?: ProductFaqInput[];
+  relations?: ProductRelationInput[];
+  specs?: ProductSpecInput[];
+  videos?: ProductVideoInput[];
+  documents?: ProductDocumentInput[];
+  contentBlocks?: ContentBlockInput[];
+}
+
+export interface BrandPayload {
+  name: string;
+  slug: string;
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
+  description?: string | null;
+  tagline?: string | null;
+  isActive?: boolean;
+  position?: number;
+  contentBlocks?: ContentBlockInput[];
+}
+
+export interface AdminContentBlock {
+  id: string;
+  productId: string | null;
+  brandId: string | null;
+  layout: ContentBlockLayout;
+  title: string | null;
+  body: string | null;
+  imageUrl: string;
+  imageAlt: string | null;
+  position: number;
+}
+
+export interface AdminBrand {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  bannerUrl: string | null;
+  description: string | null;
+  tagline: string | null;
+  isActive: boolean;
+  position: number;
+  _count: { products: number };
+}
+
+export interface AdminBrandDetail extends AdminBrand {
+  contentBlocks: AdminContentBlock[];
+}
+
+export interface AdminProductSpec {
+  id: string;
+  productId: string;
+  group: ProductSpecGroup;
+  label: string;
+  value: string;
+  isKey: boolean;
+  position: number;
+}
+
+export interface AdminProductVideo {
+  id: string;
+  productId: string;
+  url: string;
+  posterUrl: string | null;
+  title: string | null;
+  durationSeconds: number | null;
+  position: number;
+}
+
+export interface AdminProductDocument {
+  id: string;
+  productId: string;
+  title: string;
+  url: string;
+  kind: ProductDocumentKind;
+  sizeBytes: number | null;
+  position: number;
+}
+
+export interface AdminProductRelation {
+  id: string;
+  productId: string;
+  relatedProductId: string;
+  type: ProductRelationType;
+  relatedProduct: {
+    id: string;
+    name: string;
+    slug: string;
+    sku: string | null;
+    status: ProductStatus;
+    deletedAt: string | null;
+    images: { url: string }[];
+  };
+}
+
+export interface AdminOptionValue {
+  id: string;
+  optionId: string;
+  value: string;
+  position: number;
+  swatchImageUrl: string | null;
+  swatchHex: string | null;
+}
+
+export interface AdminProductOption {
+  id: string;
+  productId: string;
+  name: string;
+  position: number;
+  values: AdminOptionValue[];
+}
+
+export interface AdminProductVariant {
+  id: string;
+  productId: string;
+  sku: string | null;
+  price: string | null;
+  compareAtPrice: string | null;
+  stock: number;
+  imageUrl: string | null;
+  weightKg: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  optionValues: {
+    variantId: string;
+    optionValueId: string;
+    optionValue: AdminOptionValue & { option: { id: string; productId: string; name: string; position: number } };
+  }[];
+  _count?: { cartItems: number; priceListEntries: number };
+}
+
+export interface AdminProductDetail {
+  id: string;
+  name: string;
+  slug: string;
+  sku: string | null;
+  description: string | null;
+  technicalContent: string | null;
+  presentation: string | null;
+  performance: string | null;
+  usageInstructions: string | null;
+  precautions: string | null;
+  status: ProductStatus;
+  brandId: string | null;
+  categoryId: string | null;
+  basePrice: string;
+  compareAtPrice: string | null;
+  promoPrice: string | null;
+  promoStartsAt: string | null;
+  promoEndsAt: string | null;
+  taxRatePercent: string | null;
+  stock: number;
+  lowStockThreshold: number;
+  allowBackorder: boolean;
+  weightKg: string | null;
+  lengthCm: string | null;
+  widthCm: string | null;
+  heightCm: string | null;
+  position: number;
+  isFeatured: boolean;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  highlights: string[] | null;
+  warrantyText: string | null;
+  version?: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  brand: { id: string; name: string; slug: string } | null;
+  category: { id: string; name: string; slug: string } | null;
+  images: { id: string; url: string; alt: string | null; position: number }[];
+  options: AdminProductOption[];
+  variants: AdminProductVariant[];
+  faqs: { id: string; question: string; answer: string; position: number }[];
+  tags: { productId: string; tagId: string; tag: { id: string; name: string } }[];
+  relationsFrom: AdminProductRelation[];
+  specs: AdminProductSpec[];
+  videos: AdminProductVideo[];
+  documents: AdminProductDocument[];
+  contentBlocks: AdminContentBlock[];
 }
 
 export interface CartItemView {
@@ -130,6 +607,7 @@ export interface CartItemView {
   lineTotal: number;
   availableStock: number;
   allowBackorder: boolean;
+  unavailable?: boolean;
 }
 
 export interface CartSuggestion {

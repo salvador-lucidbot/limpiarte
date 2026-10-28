@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Badge, Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
 import { IconPause, IconPencil, IconPlay, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
+import { useSaving } from "../../../../lib/admin/use-saving";
 import { Paginated } from "../../../../lib/api/types";
 import { formatCOP, formatDate } from "../../../../lib/format";
 import { useAdminDialog } from "../../../../lib/admin/dialog-context";
@@ -37,6 +38,7 @@ const EMPTY_FORM = {
 export default function CouponsAdminPage(): React.ReactNode {
   const { data, reload } = useAdminGet<Paginated<CouponRow>>("/admin/coupons?perPage=50");
   const request = useAdminRequest();
+  const { pending, run } = useSaving();
   const { confirm, notify } = useAdminDialog();
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -150,7 +152,7 @@ export default function CouponsAdminPage(): React.ReactNode {
         </Card>
 
         <Card title={editingId ? "Editar cupón" : "Nuevo cupón"}>
-          <form onSubmit={(event) => void submit(event)} className="space-y-3">
+          <form onSubmit={(event) => { event.preventDefault(); void run("form", () => submit(event)); }} className="space-y-3">
             <Field label="Código *">
               <input
                 required
@@ -202,7 +204,7 @@ export default function CouponsAdminPage(): React.ReactNode {
             </div>
             {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
             <div className="flex gap-2">
-              <Button type="submit">{editingId ? "Guardar" : "Crear cupón"}</Button>
+              <Button type="submit" loading={pending === "form"}>{editingId ? "Guardar" : "Crear cupón"}</Button>
               {editingId && (
                 <Button
                   type="button"

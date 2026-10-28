@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { randomBytes } from "crypto";
 import { PaginatedResult, paginate, skipTake } from "../../common/pagination/pagination.dto";
 import {
@@ -69,6 +69,8 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cartService: CartService,
@@ -85,6 +87,15 @@ export class OrdersService {
 
     const view = await this.cartService.buildView(cart);
     if (view.couponError) throw new BadRequestException(`Cupón: ${view.couponError}`);
+
+    const unavailable = view.items.find((item) => item.unavailable);
+    if (unavailable) {
+      throw new BadRequestException(
+        unavailable.variantLabel
+          ? `La presentación «${unavailable.variantLabel}» de «${unavailable.name}» ya no está disponible: quítala del carrito.`
+          : `«${unavailable.name}» ya no está disponible: quítalo del carrito.`
+      );
+    }
 
     for (const item of view.items) {
       if (!item.allowBackorder && item.quantity > item.availableStock) {
@@ -395,9 +406,17 @@ export class OrdersService {
     });
     if (alreadyDiscounted) return;
 
+    const productsWithVariants = await this.productsWithVariants(order.items.flatMap((item) => (item.productId ? [item.productId] : [])));
+
     await this.prisma.$transaction(async (tx) => {
       for (const item of order.items) {
         if (!item.productId) continue;
+        if (!item.variantId && (item.variantLabel !== null || productsWithVariants.has(item.productId))) {
+          this.logger.warn(
+            `Pedido ${order.orderNumber}: la presentación «${item.variantLabel ?? item.name}» ya no existe; no se descontó inventario`
+          );
+          continue;
+        }
 
         if (item.variantId) {
           await tx.productVariant.update({ where: { id: item.variantId }, data: { stock: { decrement: item.quantity } } });
@@ -451,8 +470,12 @@ export class OrdersService {
     });
     if (alreadyRestored) return;
 
+    const productsWithVariants = await this.productsWithVariants(saleMovements.map((movement) => movement.productId));
+
     await this.prisma.$transaction(async (tx) => {
       for (const movement of saleMovements) {
+        if (!movement.variantId && productsWithVariants.has(movement.productId)) continue;
+
         if (movement.variantId) {
           await tx.productVariant.update({ where: { id: movement.variantId }, data: { stock: { increment: -movement.quantityDelta } } });
         }
@@ -471,6 +494,16 @@ export class OrdersService {
         });
       }
     });
+  }
+
+  private async productsWithVariants(productIds: string[]): Promise<Set<string>> {
+    if (productIds.length === 0) return new Set();
+    const variants = await this.prisma.productVariant.findMany({
+      where: { productId: { in: [...new Set(productIds)] } },
+      select: { productId: true },
+      distinct: ["productId"]
+    });
+    return new Set(variants.map((variant) => variant.productId));
   }
 
   private async notifyStatusChange(orderId: string, toStatus: OrderStatus): Promise<void> {

@@ -34,7 +34,7 @@ export function WishlistButton({ productId, productName, size = 17, className = 
       aria-label={saved ? `Quitar ${productName} de favoritos` : `Guardar ${productName} en favoritos`}
       aria-pressed={saved}
       className={`flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/90 shadow-sm backdrop-blur transition hover:scale-110 ${
-        saved ? "text-red-500" : "text-slate-400 hover:text-red-400"
+        saved ? "text-red-600" : "text-slate-600 hover:text-red-600"
       } ${className}`}
     >
       {saved ? <IconHeartFilled size={size} /> : <IconHeart size={size} />}

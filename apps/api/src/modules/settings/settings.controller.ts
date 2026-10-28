@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Put, Query } from "@nestjs/common";
 import { Type } from "class-transformer";
-import { IsArray, IsBoolean, IsOptional, IsString, MinLength, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsDefined, IsOptional, IsString, MinLength, ValidateNested } from "class-validator";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Public } from "../../common/decorators/public.decorator";
 import { RequirePermissions } from "../../common/decorators/permissions.decorator";
@@ -13,6 +13,13 @@ class SettingEntryDto {
   @MinLength(2)
   key!: string;
 
+  /**
+   * El valor es JSON libre, así que no lleva validación de forma. Pero necesita al menos
+   * un decorador: la ValidationPipe global corre con `whitelist: true` y elimina las
+   * propiedades sin decorar, de modo que sin esto llega `undefined` a Prisma y el upsert
+   * falla con 500 en vez de devolver un 400.
+   */
+  @IsDefined()
   value!: Prisma.InputJsonValue;
 
   @IsOptional()
@@ -61,6 +68,7 @@ const PUBLIC_SETTING_KEYS = [
   "home.sections",
   // Cifras de la portada. Si una queda vacía, la vitrina usa el número real del catálogo.
   "home.stats.products",
+  "home.stats.categories",
   "home.stats.customers",
   "home.stats.shipments",
   "home.stats.cities",

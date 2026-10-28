@@ -18,6 +18,7 @@ import {
   IconSettings,
   IconShieldCheck,
   IconStar,
+  IconStore,
   IconTag,
   IconTruck,
   IconUsers
@@ -38,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/dashboard", label: "Tablero", icon: IconChart, permission: "dashboard.view" },
   { href: "/admin/productos", label: "Productos", icon: IconPackage, permission: "catalog.manage" },
   { href: "/admin/categorias", label: "Categorías", icon: IconGrid, permission: "catalog.manage" },
+  { href: "/admin/marcas", label: "Marcas", icon: IconStore, permission: "catalog.manage" },
   { href: "/admin/inventario", label: "Inventario", icon: IconBoxes, permission: "catalog.manage" },
   { href: "/admin/pedidos", label: "Pedidos", icon: IconClipboardList, permission: "orders.view" },
   { href: "/admin/clientes", label: "Clientes", icon: IconUsers, permission: "customers.view" },

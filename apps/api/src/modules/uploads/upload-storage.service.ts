@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { randomUUID } from "crypto";
-import { copyFile, mkdir, readdir, stat, unlink, writeFile } from "fs/promises";
-import { isAbsolute, join, resolve } from "path";
+import { copyFile, mkdir, open, readdir, rename, stat, unlink, writeFile } from "fs/promises";
+import { extname, isAbsolute, join, resolve } from "path";
 
 export interface UploadedImageFile {
   originalname: string;
@@ -10,43 +10,75 @@ export interface UploadedImageFile {
   buffer: Buffer;
 }
 
-export interface StoredImage {
+export interface UploadedDiskFile {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  path: string;
+}
+
+export type UploadKind = "image" | "document" | "video";
+
+export interface StoredUpload {
   fileName: string;
   url: string;
   size: number;
   mimeType: string;
+  kind: UploadKind;
 }
 
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
-
-const EXTENSION_BY_MIME: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/avif": "avif"
-};
-
-const SAFE_FILE_NAME = /^[a-f0-9-]{36}\.(jpg|png|webp|avif)$/;
-
-export function resolveUploadsDirectory(): string {
-  const configured = process.env.UPLOADS_DIR;
-  if (configured && configured.length > 0) {
-    return isAbsolute(configured) ? resolve(configured) : resolve(process.cwd(), configured);
-  }
-  return resolve(process.cwd(), "uploads");
+interface IncomingFileHeader {
+  originalname: string;
+  mimetype: string;
 }
 
-/**
- * Imágenes que viajan compiladas dentro del artefacto de despliegue.
- * El build de Hostinger corre en un entorno efímero y solo promueve el directorio de salida,
- * así que los archivos del repositorio llegan aquí y hay que copiarlos al almacenamiento
- * persistente cuando arranca el proceso, que es lo único que ve el disco definitivo.
- */
-function resolveSeedDirectory(): string {
-  return resolve(__dirname, "..", "..", "uploads-seed");
+type UploadFilterCallback = (error: Error | null, acceptFile: boolean) => void;
+
+interface UploadPolicy {
+  maxBytes: number;
+  extensionByMime: Record<string, string>;
+  requiredOriginalExtension: string | null;
+  formatMessage: string;
+  tooLargeMessage: string;
+  invalidContentMessage: string;
+  matchesSignature: (head: Buffer, mimeType: string) => boolean;
 }
 
-function matchesMagicBytes(buffer: Buffer, mimeType: string): boolean {
+const MEGABYTE = 1024 * 1024;
+
+export const MAX_UPLOAD_BYTES = 5 * MEGABYTE;
+export const MAX_DOCUMENT_BYTES = 10 * MEGABYTE;
+export const MAX_VIDEO_BYTES = 50 * MEGABYTE;
+
+const SIGNATURE_BYTES = 64;
+
+const SEEDABLE_FILE_NAME = /^[a-f0-9-]{36}\.(jpg|png|webp|avif)$/;
+const REMOVABLE_FILE_NAME = /^[a-f0-9-]{36}\.(jpg|png|webp|avif|pdf|mp4)$/;
+
+const NON_VIDEO_ISO_BRANDS = new Set([
+  "avif",
+  "avis",
+  "heic",
+  "heix",
+  "heim",
+  "heis",
+  "hevc",
+  "hevx",
+  "mif1",
+  "msf1",
+  "crx ",
+  "jp2 ",
+  "jpx ",
+  "jpm ",
+  "M4A ",
+  "M4B ",
+  "M4P ",
+  "F4A ",
+  "F4B ",
+  "qt  "
+]);
+
+function matchesImageSignature(buffer: Buffer, mimeType: string): boolean {
   if (mimeType === "image/jpeg") return buffer.length > 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
   if (mimeType === "image/png") {
     return buffer.length > 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
@@ -60,15 +92,124 @@ function matchesMagicBytes(buffer: Buffer, mimeType: string): boolean {
   return false;
 }
 
+function matchesPdfSignature(head: Buffer): boolean {
+  return head.length >= 5 && head.subarray(0, 5).toString("latin1") === "%PDF-";
+}
+
+function matchesMp4Signature(head: Buffer): boolean {
+  if (head.length < 12) return false;
+  if (head.subarray(4, 8).toString("latin1") !== "ftyp") return false;
+  return !NON_VIDEO_ISO_BRANDS.has(head.subarray(8, 12).toString("latin1"));
+}
+
+const UPLOAD_POLICIES: Record<UploadKind, UploadPolicy> = {
+  image: {
+    maxBytes: MAX_UPLOAD_BYTES,
+    extensionByMime: { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/avif": "avif" },
+    requiredOriginalExtension: null,
+    formatMessage: "Formato no permitido: usa JPG, PNG, WebP o AVIF",
+    tooLargeMessage: "La imagen supera el máximo de 5 MB",
+    invalidContentMessage: "El contenido del archivo no corresponde a una imagen válida",
+    matchesSignature: matchesImageSignature
+  },
+  document: {
+    maxBytes: MAX_DOCUMENT_BYTES,
+    extensionByMime: { "application/pdf": "pdf" },
+    requiredOriginalExtension: ".pdf",
+    formatMessage: "Formato no permitido: solo se aceptan documentos PDF",
+    tooLargeMessage: "El documento supera el máximo de 10 MB",
+    invalidContentMessage: "El contenido del archivo no corresponde a un PDF válido",
+    matchesSignature: matchesPdfSignature
+  },
+  video: {
+    maxBytes: MAX_VIDEO_BYTES,
+    extensionByMime: { "video/mp4": "mp4" },
+    requiredOriginalExtension: ".mp4",
+    formatMessage: "Formato no permitido: solo se aceptan videos MP4",
+    tooLargeMessage: "El video supera el máximo de 50 MB",
+    invalidContentMessage: "El archivo no es un video MP4 válido: expórtalo como MP4 (H.264)",
+    matchesSignature: matchesMp4Signature
+  }
+};
+
+export function resolveUploadsDirectory(): string {
+  const configured = process.env.UPLOADS_DIR;
+  if (configured && configured.length > 0) {
+    return isAbsolute(configured) ? resolve(configured) : resolve(process.cwd(), configured);
+  }
+  return resolve(process.cwd(), "uploads");
+}
+
+export function resolveIncomingDirectory(): string {
+  return join(resolveUploadsDirectory(), ".incoming");
+}
+
+function resolveSeedDirectory(): string {
+  return resolve(__dirname, "..", "..", "uploads-seed");
+}
+
+function formatError(kind: UploadKind, file: IncomingFileHeader): string | null {
+  const policy = UPLOAD_POLICIES[kind];
+  if (!policy.extensionByMime[file.mimetype]) return policy.formatMessage;
+  if (!policy.requiredOriginalExtension) return null;
+  if (extname(file.originalname).toLowerCase() !== policy.requiredOriginalExtension) return policy.formatMessage;
+  return null;
+}
+
+export function uploadFileFilter(
+  kind: UploadKind
+): (request: unknown, file: IncomingFileHeader, callback: UploadFilterCallback) => void {
+  return (_request, file, callback) => {
+    const message = formatError(kind, file);
+    if (message) {
+      callback(new BadRequestException(message), false);
+      return;
+    }
+    callback(null, true);
+  };
+}
+
+async function readHead(path: string): Promise<Buffer> {
+  const handle = await open(path, "r");
+  try {
+    const head = Buffer.alloc(SIGNATURE_BYTES);
+    const { bytesRead } = await handle.read(head, 0, SIGNATURE_BYTES, 0);
+    return head.subarray(0, bytesRead);
+  } finally {
+    await handle.close();
+  }
+}
+
+async function discard(path: string): Promise<void> {
+  try {
+    await unlink(path);
+  } catch {
+    void 0;
+  }
+}
+
 @Injectable()
 export class UploadStorageService implements OnModuleInit {
   private readonly logger = new Logger(UploadStorageService.name);
   readonly directory = resolveUploadsDirectory();
+  private readonly incomingDirectory = resolveIncomingDirectory();
 
   async onModuleInit(): Promise<void> {
     await mkdir(this.directory, { recursive: true });
-    this.logger.log(`Almacenamiento de imágenes en ${this.directory}`);
+    await mkdir(this.incomingDirectory, { recursive: true });
+    this.logger.log(`Almacenamiento de archivos en ${this.directory}`);
+    await this.clearIncoming();
     await this.seedBundledImages();
+  }
+
+  private async clearIncoming(): Promise<void> {
+    let names: string[];
+    try {
+      names = await readdir(this.incomingDirectory);
+    } catch {
+      return;
+    }
+    for (const name of names) await discard(join(this.incomingDirectory, name));
   }
 
   private async seedBundledImages(): Promise<void> {
@@ -85,7 +226,7 @@ export class UploadStorageService implements OnModuleInit {
     let copied = 0;
 
     for (const name of names) {
-      if (!SAFE_FILE_NAME.test(name)) continue;
+      if (!SEEDABLE_FILE_NAME.test(name)) continue;
 
       const target = join(this.directory, name);
       try {
@@ -106,30 +247,39 @@ export class UploadStorageService implements OnModuleInit {
     if (copied > 0) this.logger.log(`Imágenes sembradas desde el artefacto: ${copied}`);
   }
 
-  async saveImage(file: UploadedImageFile, requestBaseUrl: string): Promise<StoredImage> {
-    if (!file) throw new BadRequestException("No se recibió ningún archivo");
-    if (file.size > MAX_UPLOAD_BYTES) throw new BadRequestException("La imagen supera el máximo de 5 MB");
-
-    const extension = EXTENSION_BY_MIME[file.mimetype];
-    if (!extension) throw new BadRequestException("Formato no permitido: usa JPG, PNG, WebP o AVIF");
-    if (!matchesMagicBytes(file.buffer, file.mimetype)) {
-      throw new BadRequestException("El contenido del archivo no corresponde a una imagen válida");
-    }
-
-    const fileName = `${randomUUID()}.${extension}`;
-    await mkdir(this.directory, { recursive: true });
-    await writeFile(join(this.directory, fileName), file.buffer);
-
-    return {
-      fileName,
-      url: `${this.publicBaseUrl(requestBaseUrl)}/uploads/${fileName}`,
-      size: file.size,
-      mimeType: file.mimetype
-    };
+  saveImage(file: UploadedImageFile, requestBaseUrl: string): Promise<StoredUpload> {
+    return this.saveBuffer("image", file, requestBaseUrl);
   }
 
-  async removeImage(fileName: string): Promise<boolean> {
-    if (!SAFE_FILE_NAME.test(fileName)) throw new BadRequestException("Nombre de archivo inválido");
+  saveDocument(file: UploadedImageFile, requestBaseUrl: string): Promise<StoredUpload> {
+    return this.saveBuffer("document", file, requestBaseUrl);
+  }
+
+  async saveVideo(file: UploadedDiskFile | undefined, requestBaseUrl: string): Promise<StoredUpload> {
+    if (!file) throw new BadRequestException("No se recibió ningún archivo");
+
+    try {
+      const policy = UPLOAD_POLICIES.video;
+      const formatMessage = formatError("video", file);
+      if (formatMessage) throw new BadRequestException(formatMessage);
+      if (file.size > policy.maxBytes) throw new BadRequestException(policy.tooLargeMessage);
+
+      const head = await readHead(file.path);
+      if (!policy.matchesSignature(head, file.mimetype)) throw new BadRequestException(policy.invalidContentMessage);
+
+      const fileName = `${randomUUID()}.mp4`;
+      await mkdir(this.directory, { recursive: true });
+      await rename(file.path, join(this.directory, fileName));
+
+      return this.describe("video", fileName, file.size, file.mimetype, requestBaseUrl);
+    } catch (error) {
+      await discard(file.path);
+      throw error;
+    }
+  }
+
+  async removeFile(fileName: string): Promise<boolean> {
+    if (!REMOVABLE_FILE_NAME.test(fileName)) throw new BadRequestException("Nombre de archivo inválido");
 
     try {
       await unlink(join(this.directory, fileName));
@@ -137,6 +287,36 @@ export class UploadStorageService implements OnModuleInit {
     } catch {
       return false;
     }
+  }
+
+  private async saveBuffer(kind: UploadKind, file: UploadedImageFile | undefined, requestBaseUrl: string): Promise<StoredUpload> {
+    if (!file) throw new BadRequestException("No se recibió ningún archivo");
+
+    const policy = UPLOAD_POLICIES[kind];
+    if (file.size > policy.maxBytes) throw new BadRequestException(policy.tooLargeMessage);
+
+    const formatMessage = formatError(kind, file);
+    if (formatMessage) throw new BadRequestException(formatMessage);
+
+    const extension = policy.extensionByMime[file.mimetype];
+    if (!extension) throw new BadRequestException(policy.formatMessage);
+    if (!policy.matchesSignature(file.buffer, file.mimetype)) throw new BadRequestException(policy.invalidContentMessage);
+
+    const fileName = `${randomUUID()}.${extension}`;
+    await mkdir(this.directory, { recursive: true });
+    await writeFile(join(this.directory, fileName), file.buffer);
+
+    return this.describe(kind, fileName, file.size, file.mimetype, requestBaseUrl);
+  }
+
+  private describe(kind: UploadKind, fileName: string, size: number, mimeType: string, requestBaseUrl: string): StoredUpload {
+    return {
+      fileName,
+      url: `${this.publicBaseUrl(requestBaseUrl)}/uploads/${fileName}`,
+      size,
+      mimeType,
+      kind
+    };
   }
 
   private publicBaseUrl(requestBaseUrl: string): string {
