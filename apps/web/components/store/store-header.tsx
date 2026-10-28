@@ -8,7 +8,7 @@ import { useCustomerAuth } from "../../lib/auth/customer-auth-context";
 import { useCart } from "../../lib/cart/cart-context";
 import { formatCOP } from "../../lib/format";
 import { useWishlist } from "../../lib/wishlist/wishlist-context";
-import { IconCart, IconCheck, IconChevronDown, IconExternalLink, IconHeart, IconLogOut, IconMenu, IconTruck, IconX } from "../icons";
+import { IconCart, IconCheck, IconChevronDown, IconExternalLink, IconHeart, IconLogOut, IconMenu, IconStore, IconTruck, IconX } from "../icons";
 import { Logo } from "../logo";
 import { CustomerMenu } from "./customer-menu";
 import { SearchAutocomplete } from "./search-autocomplete";
@@ -193,12 +193,22 @@ export function StoreHeader({ categories, storeName, announcements }: StoreHeade
 
       <nav className="hidden border-b border-slate-200 bg-white lg:block">
         <div className="mx-auto flex max-w-7xl items-center gap-1 px-4 text-sm font-medium text-slate-600">
+          <Link href="/tienda" className="flex items-center gap-1.5 px-3 py-2.5 font-semibold text-navy-900 transition hover:text-brand-600">
+            <IconStore size={16} />
+            Tienda
+          </Link>
+          <span className="mx-1 h-4 w-px bg-slate-200" />
           <div className="relative" onMouseEnter={() => setCategoriesOpen(true)} onMouseLeave={() => setCategoriesOpen(false)}>
-            <Link href="/tienda" className="flex items-center gap-1.5 px-3 py-2.5 transition hover:text-brand-600">
+            <button
+              type="button"
+              onClick={() => setCategoriesOpen((open) => !open)}
+              aria-expanded={categoriesOpen}
+              className="flex items-center gap-1.5 px-3 py-2.5 transition hover:text-brand-600"
+            >
               <IconMenu size={16} />
               Categorías
               <IconChevronDown size={14} />
-            </Link>
+            </button>
             {categoriesOpen && categories.length > 0 && (
               <div className="absolute left-0 top-full z-50 w-64 rounded-b-xl border border-t-0 border-slate-200 bg-white py-2 shadow-lg">
                 {categories.map((category) => (
