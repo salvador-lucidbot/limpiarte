@@ -7,7 +7,9 @@ import type {
   ProductOptionView,
   ProductRecommendations,
   ProductVariantView,
-  ProductVideoView
+  ProductVideoView,
+  ProductBannerView,
+  ProductSectionTitles
 } from "../../../../lib/api/types";
 
 type DetailExtensionKey =
@@ -24,6 +26,8 @@ type DetailExtensionKey =
   | "usageMedia"
   | "topBanner"
   | "bottomBanner"
+  | "sectionTitles"
+  | "offerPacks"
   | "videos"
   | "documents"
   | "specs"
@@ -105,6 +109,34 @@ function normalizeOptions(options: OptionPayload[], variants: VariantPayload[]):
   }));
 }
 
+const EMPTY_SECTION_TITLES: ProductSectionTitles = {
+  highlights: null,
+  highlightsSubtitle: null,
+  description: null,
+  descriptionSubtitle: null,
+  usage: null,
+  videos: null,
+  documents: null,
+  content: null
+};
+
+type BannerPayload = Pick<ProductBannerView, "url" | "linkUrl" | "alt"> & Partial<ProductBannerView>;
+
+function normalizeBanner(banner: BannerPayload | null | undefined): ProductBannerView | null {
+  if (!banner) return null;
+  return {
+    height: null,
+    focus: null,
+    title: null,
+    subtitle: null,
+    ctaLabel: null,
+    textPlacement: null,
+    textOnDark: true,
+    overlay: null,
+    ...banner
+  };
+}
+
 function normalizeProductDetail(payload: ProductDetailPayload): ProductDetail {
   return {
     ...payload,
@@ -119,8 +151,10 @@ function normalizeProductDetail(payload: ProductDetailPayload): ProductDetail {
     warrantyText: payload.warrantyText ?? null,
     bundlePromo: payload.bundlePromo ?? null,
     usageMedia: payload.usageMedia ?? null,
-    topBanner: payload.topBanner ?? null,
-    bottomBanner: payload.bottomBanner ?? null,
+    topBanner: normalizeBanner(payload.topBanner),
+    bottomBanner: normalizeBanner(payload.bottomBanner),
+    sectionTitles: { ...EMPTY_SECTION_TITLES, ...payload.sectionTitles },
+    offerPacks: payload.offerPacks ?? [],
     videos: (payload.videos ?? []).map((video) => ({ ...video, createdAt: video.createdAt ?? null })),
     documents: payload.documents ?? [],
     specs: payload.specs ?? [],

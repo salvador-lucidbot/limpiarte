@@ -146,7 +146,7 @@ export type CardProduct = Prisma.ProductGetPayload<{
 export const CARD_INCLUDE = {
   brand: true,
   category: true,
-  images: { orderBy: { position: "asc" }, take: 2 },
+  images: { orderBy: [{ isCover: "desc" }, { position: "asc" }], take: 2 },
   tags: { include: { tag: true } },
   variants: { where: { isActive: true } }
 } satisfies Prisma.ProductInclude;
@@ -154,7 +154,7 @@ export const CARD_INCLUDE = {
 const SUGGEST_INCLUDE = {
   brand: { select: { name: true } },
   category: { select: { name: true, slug: true } },
-  images: { orderBy: { position: "asc" }, take: 1, select: { url: true } }
+  images: { orderBy: [{ isCover: "desc" }, { position: "asc" }], take: 1, select: { url: true } }
 } satisfies Prisma.ProductInclude;
 
 const NEW_PRODUCT_DAYS = 30;

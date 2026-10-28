@@ -21,6 +21,8 @@ import {
   ProductDocumentKind,
   ProductRelationType,
   ProductSpecGroup,
+  BannerFocus,
+  BannerTextPlacement,
   ProductStatus,
   UsageMediaKind
 } from "../../../generated/prisma/enums";
@@ -35,6 +37,8 @@ export const MAX_DOCUMENTS = 10;
 export const MAX_RELATIONS = 40;
 export const MAX_PROMO_BUY_QUANTITY = 3;
 export const MAX_BANNER_ALT_LENGTH = 160;
+export const MAX_OFFER_PACKS = 4;
+export const MAX_OFFER_PACK_QUANTITY = 20;
 
 export class ProductImageDto {
   @IsString()
@@ -48,6 +52,58 @@ export class ProductImageDto {
   @Type(() => Number)
   @IsInt()
   position?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isCover?: boolean;
+}
+
+export class ProductOfferPackDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  eyebrow?: string | null;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  title!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  badgeLabel!: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_OFFER_PACK_QUANTITY)
+  quantity!: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  price!: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  compareAtPrice?: number | null;
+
+  @IsOptional()
+  @IsUrl(HTTP_URL_OPTIONS)
+  @MaxLength(MAX_URL_LENGTH)
+  imageUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  ctaLabel?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  isHighlighted?: boolean;
 }
 
 export class ProductOptionValueDto {
@@ -341,6 +397,127 @@ export class CreateProductDto {
   @IsString()
   @MaxLength(MAX_BANNER_ALT_LENGTH)
   bottomBannerAlt?: string | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  topBannerHeight?: number | null;
+
+  @IsOptional()
+  @IsEnum(BannerFocus)
+  topBannerFocus?: BannerFocus | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  topBannerTitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  topBannerSubtitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  topBannerCtaLabel?: string | null;
+
+  @IsOptional()
+  @IsEnum(BannerTextPlacement)
+  topBannerTextPlacement?: BannerTextPlacement | null;
+
+  @IsOptional()
+  @IsBoolean()
+  topBannerTextOnDark?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  topBannerOverlay?: number | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  bottomBannerHeight?: number | null;
+
+  @IsOptional()
+  @IsEnum(BannerFocus)
+  bottomBannerFocus?: BannerFocus | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  bottomBannerTitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  bottomBannerSubtitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  bottomBannerCtaLabel?: string | null;
+
+  @IsOptional()
+  @IsEnum(BannerTextPlacement)
+  bottomBannerTextPlacement?: BannerTextPlacement | null;
+
+  @IsOptional()
+  @IsBoolean()
+  bottomBannerTextOnDark?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  bottomBannerOverlay?: number | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  highlightsTitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  highlightsSubtitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  descriptionTitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  descriptionSubtitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  usageTitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  videosTitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  documentsTitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  contentTitle?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_OFFER_PACKS)
+  @ValidateNested({ each: true })
+  @Type(() => ProductOfferPackDto)
+  offerPacks?: ProductOfferPackDto[];
 
   @IsOptional()
   @Type(() => Number)

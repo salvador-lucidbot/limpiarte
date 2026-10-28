@@ -234,10 +234,55 @@ export interface ContentBlockView {
 
 export type UsageMediaKind = "IMAGEN" | "VIDEO" | "PDF";
 
+export const BANNER_FOCUS_VALUES = [
+  "ARRIBA_IZQUIERDA", "ARRIBA_CENTRO", "ARRIBA_DERECHA",
+  "CENTRO_IZQUIERDA", "CENTRO", "CENTRO_DERECHA",
+  "ABAJO_IZQUIERDA", "ABAJO_CENTRO", "ABAJO_DERECHA"
+] as const;
+
+export type BannerFocus = (typeof BANNER_FOCUS_VALUES)[number];
+
+export type BannerTextPlacement = "IZQUIERDA" | "CENTRO" | "DERECHA";
+
+export const BANNER_HEIGHT_RANGE = { min: 80, max: 600 } as const;
+export const BANNER_OVERLAY_RANGE = { min: 0, max: 80 } as const;
+
 export interface ProductBannerView {
   url: string;
   linkUrl: string | null;
   alt: string | null;
+  height: number | null;
+  focus: BannerFocus | null;
+  title: string | null;
+  subtitle: string | null;
+  ctaLabel: string | null;
+  textPlacement: BannerTextPlacement | null;
+  textOnDark: boolean;
+  overlay: number | null;
+}
+
+export interface ProductSectionTitles {
+  highlights: string | null;
+  highlightsSubtitle: string | null;
+  description: string | null;
+  descriptionSubtitle: string | null;
+  usage: string | null;
+  videos: string | null;
+  documents: string | null;
+  content: string | null;
+}
+
+export interface ProductOfferPackView {
+  id: string;
+  eyebrow: string | null;
+  title: string;
+  badgeLabel: string;
+  quantity: number;
+  price: number;
+  compareAtPrice: number | null;
+  imageUrl: string | null;
+  ctaLabel: string | null;
+  isHighlighted: boolean;
 }
 
 export interface BundlePromoView {
@@ -288,6 +333,8 @@ export interface ProductDetail {
   usageMedia: ProductUsageMediaView | null;
   topBanner: ProductBannerView | null;
   bottomBanner: ProductBannerView | null;
+  sectionTitles: ProductSectionTitles;
+  offerPacks: ProductOfferPackView[];
   images: { url: string; alt: string | null }[];
   videos: ProductVideoView[];
   documents: ProductDocumentView[];
@@ -329,6 +376,19 @@ export interface ProductImageInput {
   url: string;
   alt?: string;
   position?: number;
+  isCover?: boolean;
+}
+
+export interface ProductOfferPackInput {
+  eyebrow?: string | null;
+  title: string;
+  badgeLabel: string;
+  quantity: number;
+  price: number;
+  compareAtPrice?: number | null;
+  imageUrl?: string | null;
+  ctaLabel?: string | null;
+  isHighlighted?: boolean;
 }
 
 export interface ProductOptionValueInput {
@@ -425,6 +485,31 @@ export interface AdminProductPayload {
   bottomBannerUrl?: string | null;
   bottomBannerLinkUrl?: string | null;
   bottomBannerAlt?: string | null;
+  topBannerHeight?: number | null;
+  topBannerFocus?: BannerFocus | null;
+  topBannerTitle?: string | null;
+  topBannerSubtitle?: string | null;
+  topBannerCtaLabel?: string | null;
+  topBannerTextPlacement?: BannerTextPlacement | null;
+  topBannerTextOnDark?: boolean;
+  topBannerOverlay?: number | null;
+  bottomBannerHeight?: number | null;
+  bottomBannerFocus?: BannerFocus | null;
+  bottomBannerTitle?: string | null;
+  bottomBannerSubtitle?: string | null;
+  bottomBannerCtaLabel?: string | null;
+  bottomBannerTextPlacement?: BannerTextPlacement | null;
+  bottomBannerTextOnDark?: boolean;
+  bottomBannerOverlay?: number | null;
+  highlightsTitle?: string | null;
+  highlightsSubtitle?: string | null;
+  descriptionTitle?: string | null;
+  descriptionSubtitle?: string | null;
+  usageTitle?: string | null;
+  videosTitle?: string | null;
+  documentsTitle?: string | null;
+  contentTitle?: string | null;
+  offerPacks?: ProductOfferPackInput[];
   stock?: number;
   stockBaseline?: number;
   expectedVersion?: number;
@@ -575,6 +660,20 @@ export interface AdminProductVariant {
   _count?: { cartItems: number; priceListEntries: number };
 }
 
+export interface AdminOfferPack {
+  id: string;
+  eyebrow: string | null;
+  title: string;
+  badgeLabel: string;
+  quantity: number;
+  price: string;
+  compareAtPrice: string | null;
+  imageUrl: string | null;
+  ctaLabel: string | null;
+  isHighlighted: boolean;
+  position: number;
+}
+
 export interface AdminProductDetail {
   id: string;
   name: string;
@@ -618,13 +717,38 @@ export interface AdminProductDetail {
   bottomBannerUrl: string | null;
   bottomBannerLinkUrl: string | null;
   bottomBannerAlt: string | null;
+  topBannerHeight: number | null;
+  topBannerFocus: BannerFocus | null;
+  topBannerTitle: string | null;
+  topBannerSubtitle: string | null;
+  topBannerCtaLabel: string | null;
+  topBannerTextPlacement: BannerTextPlacement | null;
+  topBannerTextOnDark: boolean;
+  topBannerOverlay: number | null;
+  bottomBannerHeight: number | null;
+  bottomBannerFocus: BannerFocus | null;
+  bottomBannerTitle: string | null;
+  bottomBannerSubtitle: string | null;
+  bottomBannerCtaLabel: string | null;
+  bottomBannerTextPlacement: BannerTextPlacement | null;
+  bottomBannerTextOnDark: boolean;
+  bottomBannerOverlay: number | null;
+  highlightsTitle: string | null;
+  highlightsSubtitle: string | null;
+  descriptionTitle: string | null;
+  descriptionSubtitle: string | null;
+  usageTitle: string | null;
+  videosTitle: string | null;
+  documentsTitle: string | null;
+  contentTitle: string | null;
+  offerPacks: AdminOfferPack[];
   version?: number;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
   brand: { id: string; name: string; slug: string } | null;
   category: { id: string; name: string; slug: string } | null;
-  images: { id: string; url: string; alt: string | null; position: number }[];
+  images: { id: string; url: string; alt: string | null; position: number; isCover: boolean }[];
   options: AdminProductOption[];
   variants: AdminProductVariant[];
   faqs: { id: string; question: string; answer: string; position: number }[];

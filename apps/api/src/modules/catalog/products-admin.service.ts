@@ -4,7 +4,10 @@ import { InventoryReason, Prisma, Product, ProductStatus } from "../../generated
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import {
+  BANNER_HEIGHT_RANGE,
+  BANNER_OVERLAY_RANGE,
   CATALOG_TRANSACTION_OPTIONS,
+  clampOptional,
   decimalToNumber,
   normalizeHighlights,
   normalizeText,
@@ -18,6 +21,7 @@ import {
   BulkImportDto,
   CreateProductDto,
   ProductDocumentDto,
+  ProductOfferPackDto,
   ProductRelationDto,
   ProductSpecDto,
   ProductVideoDto,
@@ -31,6 +35,7 @@ const DETAIL_INCLUDE = {
   brand: true,
   category: true,
   images: { orderBy: { position: "asc" } },
+  offerPacks: { orderBy: { position: "asc" } },
   options: { include: { values: { orderBy: { position: "asc" } } }, orderBy: { position: "asc" } },
   variants: {
     include: {
@@ -389,6 +394,30 @@ export class ProductsAdminService {
       bottomBannerUrl: dto.bottomBannerUrl ?? null,
       bottomBannerLinkUrl: dto.bottomBannerLinkUrl ?? null,
       bottomBannerAlt: patchText(dto.bottomBannerAlt),
+      topBannerHeight: clampOptional(dto.topBannerHeight, BANNER_HEIGHT_RANGE),
+      topBannerFocus: dto.topBannerFocus ?? null,
+      topBannerTitle: patchText(dto.topBannerTitle),
+      topBannerSubtitle: patchText(dto.topBannerSubtitle),
+      topBannerCtaLabel: patchText(dto.topBannerCtaLabel),
+      topBannerTextPlacement: dto.topBannerTextPlacement ?? null,
+      topBannerTextOnDark: dto.topBannerTextOnDark,
+      topBannerOverlay: clampOptional(dto.topBannerOverlay, BANNER_OVERLAY_RANGE),
+      bottomBannerHeight: clampOptional(dto.bottomBannerHeight, BANNER_HEIGHT_RANGE),
+      bottomBannerFocus: dto.bottomBannerFocus ?? null,
+      bottomBannerTitle: patchText(dto.bottomBannerTitle),
+      bottomBannerSubtitle: patchText(dto.bottomBannerSubtitle),
+      bottomBannerCtaLabel: patchText(dto.bottomBannerCtaLabel),
+      bottomBannerTextPlacement: dto.bottomBannerTextPlacement ?? null,
+      bottomBannerTextOnDark: dto.bottomBannerTextOnDark,
+      bottomBannerOverlay: clampOptional(dto.bottomBannerOverlay, BANNER_OVERLAY_RANGE),
+      highlightsTitle: patchText(dto.highlightsTitle),
+      highlightsSubtitle: patchText(dto.highlightsSubtitle),
+      descriptionTitle: patchText(dto.descriptionTitle),
+      descriptionSubtitle: patchText(dto.descriptionSubtitle),
+      usageTitle: patchText(dto.usageTitle),
+      videosTitle: patchText(dto.videosTitle),
+      documentsTitle: patchText(dto.documentsTitle),
+      contentTitle: patchText(dto.contentTitle),
       lowStockThreshold: dto.lowStockThreshold,
       allowBackorder: dto.allowBackorder,
       weightKg: dto.weightKg ?? null,
@@ -445,8 +474,30 @@ export class ProductsAdminService {
     if (dto.videos) await this.replaceVideos(tx, productId, dto.videos);
     if (dto.documents) await this.replaceDocuments(tx, productId, dto.documents);
     if (dto.contentBlocks) await replaceContentBlocks(tx, { productId }, dto.contentBlocks);
+    if (dto.offerPacks) await this.replaceOfferPacks(tx, productId, dto.offerPacks);
 
     return syncProductVariants(tx, productId, { options: dto.options, variants: dto.variants }, actorId);
+  }
+
+  private async replaceOfferPacks(tx: Prisma.TransactionClient, productId: string, packs: ProductOfferPackDto[]): Promise<void> {
+    await tx.productOfferPack.deleteMany({ where: { productId } });
+    if (packs.length === 0) return;
+
+    await tx.productOfferPack.createMany({
+      data: packs.map((pack, index) => ({
+        productId,
+        eyebrow: pack.eyebrow?.trim() || null,
+        title: pack.title.trim(),
+        badgeLabel: pack.badgeLabel.trim(),
+        quantity: pack.quantity,
+        price: pack.price,
+        compareAtPrice: pack.compareAtPrice ?? null,
+        imageUrl: pack.imageUrl ?? null,
+        ctaLabel: pack.ctaLabel?.trim() || null,
+        isHighlighted: pack.isHighlighted ?? false,
+        position: index
+      }))
+    });
   }
 
   private async replaceRelations(tx: Prisma.TransactionClient, productId: string, relations: ProductRelationDto[]): Promise<void> {
@@ -543,7 +594,8 @@ export class ProductsAdminService {
             productId,
             url: image.url,
             alt: image.alt,
-            position: image.position ?? index
+            position: image.position ?? index,
+            isCover: image.isCover ?? false
           }))
         });
       }
@@ -622,6 +674,30 @@ export class ProductsAdminService {
       bottomBannerUrl: source.bottomBannerUrl,
       bottomBannerLinkUrl: source.bottomBannerLinkUrl,
       bottomBannerAlt: source.bottomBannerAlt,
+      topBannerHeight: source.topBannerHeight,
+      topBannerFocus: source.topBannerFocus,
+      topBannerTitle: source.topBannerTitle,
+      topBannerSubtitle: source.topBannerSubtitle,
+      topBannerCtaLabel: source.topBannerCtaLabel,
+      topBannerTextPlacement: source.topBannerTextPlacement,
+      topBannerTextOnDark: source.topBannerTextOnDark,
+      topBannerOverlay: source.topBannerOverlay,
+      bottomBannerHeight: source.bottomBannerHeight,
+      bottomBannerFocus: source.bottomBannerFocus,
+      bottomBannerTitle: source.bottomBannerTitle,
+      bottomBannerSubtitle: source.bottomBannerSubtitle,
+      bottomBannerCtaLabel: source.bottomBannerCtaLabel,
+      bottomBannerTextPlacement: source.bottomBannerTextPlacement,
+      bottomBannerTextOnDark: source.bottomBannerTextOnDark,
+      bottomBannerOverlay: source.bottomBannerOverlay,
+      highlightsTitle: source.highlightsTitle,
+      highlightsSubtitle: source.highlightsSubtitle,
+      descriptionTitle: source.descriptionTitle,
+      descriptionSubtitle: source.descriptionSubtitle,
+      usageTitle: source.usageTitle,
+      videosTitle: source.videosTitle,
+      documentsTitle: source.documentsTitle,
+      contentTitle: source.contentTitle,
       stock: 0,
       lowStockThreshold: source.lowStockThreshold,
       allowBackorder: source.allowBackorder,

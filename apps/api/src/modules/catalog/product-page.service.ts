@@ -5,6 +5,8 @@ import type {
   Prisma,
   ProductDocumentKind,
   ProductRelationType,
+  BannerFocus,
+  BannerTextPlacement,
   ProductSpecGroup,
   UsageMediaKind
 } from "../../generated/prisma/client";
@@ -100,6 +102,38 @@ export interface ProductBannerView {
   url: string;
   linkUrl: string | null;
   alt: string | null;
+  height: number | null;
+  focus: BannerFocus | null;
+  title: string | null;
+  subtitle: string | null;
+  ctaLabel: string | null;
+  textPlacement: BannerTextPlacement | null;
+  textOnDark: boolean;
+  overlay: number | null;
+}
+
+export interface ProductSectionTitles {
+  highlights: string | null;
+  highlightsSubtitle: string | null;
+  description: string | null;
+  descriptionSubtitle: string | null;
+  usage: string | null;
+  videos: string | null;
+  documents: string | null;
+  content: string | null;
+}
+
+export interface ProductOfferPackView {
+  id: string;
+  eyebrow: string | null;
+  title: string;
+  badgeLabel: string;
+  quantity: number;
+  price: number;
+  compareAtPrice: number | null;
+  imageUrl: string | null;
+  ctaLabel: string | null;
+  isHighlighted: boolean;
 }
 
 export interface BundlePromoView {
@@ -150,6 +184,8 @@ export interface ProductDetail {
   usageMedia: ProductUsageMediaView | null;
   topBanner: ProductBannerView | null;
   bottomBanner: ProductBannerView | null;
+  sectionTitles: ProductSectionTitles;
+  offerPacks: ProductOfferPackView[];
   images: { url: string; alt: string | null }[];
   videos: ProductVideoView[];
   documents: ProductDocumentView[];
@@ -188,6 +224,7 @@ const DETAIL_INCLUDE = {
   brand: { include: { contentBlocks: { orderBy: { position: "asc" } } } },
   category: true,
   images: { orderBy: { position: "asc" } },
+  offerPacks: { orderBy: { position: "asc" } },
   options: { include: { values: { orderBy: { position: "asc" } } }, orderBy: { position: "asc" } },
   variants: {
     where: { isActive: true },
@@ -272,9 +309,36 @@ function buildOptionViews(product: DetailProduct): ProductOptionView[] {
   }));
 }
 
-function buildBanner(url: string | null, linkUrl: string | null, alt: string | null): ProductBannerView | null {
-  if (!url) return null;
-  return { url, linkUrl, alt };
+interface BannerSource {
+  url: string | null;
+  linkUrl: string | null;
+  alt: string | null;
+  height: number | null;
+  focus: BannerFocus | null;
+  title: string | null;
+  subtitle: string | null;
+  ctaLabel: string | null;
+  textPlacement: BannerTextPlacement | null;
+  textOnDark: boolean;
+  overlay: number | null;
+}
+
+function buildBanner(source: BannerSource): ProductBannerView | null {
+  if (!source.url) return null;
+  return { ...source, url: source.url };
+}
+
+function buildSectionTitles(product: DetailProduct): ProductSectionTitles {
+  return {
+    highlights: product.highlightsTitle,
+    highlightsSubtitle: product.highlightsSubtitle,
+    description: product.descriptionTitle,
+    descriptionSubtitle: product.descriptionSubtitle,
+    usage: product.usageTitle,
+    videos: product.videosTitle,
+    documents: product.documentsTitle,
+    content: product.contentTitle
+  };
 }
 
 function buildUsageMedia(product: DetailProduct): ProductUsageMediaView | null {
@@ -367,8 +431,45 @@ export class ProductPageService {
       warrantyText: product.warrantyText,
       bundlePromo: bundle && { buyQuantity: bundle.buyQuantity, getQuantity: bundle.getQuantity, label: bundle.label },
       usageMedia: buildUsageMedia(product),
-      topBanner: buildBanner(product.topBannerUrl, product.topBannerLinkUrl, product.topBannerAlt),
-      bottomBanner: buildBanner(product.bottomBannerUrl, product.bottomBannerLinkUrl, product.bottomBannerAlt),
+      topBanner: buildBanner({
+        url: product.topBannerUrl,
+        linkUrl: product.topBannerLinkUrl,
+        alt: product.topBannerAlt,
+        height: product.topBannerHeight,
+        focus: product.topBannerFocus,
+        title: product.topBannerTitle,
+        subtitle: product.topBannerSubtitle,
+        ctaLabel: product.topBannerCtaLabel,
+        textPlacement: product.topBannerTextPlacement,
+        textOnDark: product.topBannerTextOnDark,
+        overlay: product.topBannerOverlay
+      }),
+      bottomBanner: buildBanner({
+        url: product.bottomBannerUrl,
+        linkUrl: product.bottomBannerLinkUrl,
+        alt: product.bottomBannerAlt,
+        height: product.bottomBannerHeight,
+        focus: product.bottomBannerFocus,
+        title: product.bottomBannerTitle,
+        subtitle: product.bottomBannerSubtitle,
+        ctaLabel: product.bottomBannerCtaLabel,
+        textPlacement: product.bottomBannerTextPlacement,
+        textOnDark: product.bottomBannerTextOnDark,
+        overlay: product.bottomBannerOverlay
+      }),
+      sectionTitles: buildSectionTitles(product),
+      offerPacks: product.offerPacks.map((pack) => ({
+        id: pack.id,
+        eyebrow: pack.eyebrow,
+        title: pack.title,
+        badgeLabel: pack.badgeLabel,
+        quantity: pack.quantity,
+        price: Number(pack.price),
+        compareAtPrice: decimalToNumber(pack.compareAtPrice),
+        imageUrl: pack.imageUrl,
+        ctaLabel: pack.ctaLabel,
+        isHighlighted: pack.isHighlighted
+      })),
       images: product.images.map((image) => ({ url: image.url, alt: image.alt })),
       videos: product.videos.map((video) => ({
         id: video.id,
