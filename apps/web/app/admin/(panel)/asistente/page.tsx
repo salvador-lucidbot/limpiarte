@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { Markdown } from "../../../../components/admin/markdown";
 import { Badge, Button, Card, inputClass } from "../../../../components/admin/ui";
 import { IconBot, IconRefresh, IconSparkles } from "../../../../components/icons";
 import { Loader } from "../../../../components/loader";
@@ -152,11 +153,11 @@ export default function AssistantPage(): React.ReactNode {
             {turns.map((turn, index) => (
               <div key={`${turn.role}-${index}`} className={turn.role === "user" ? "flex justify-end" : "flex justify-start"}>
                 <div
-                  className={`min-w-0 max-w-[85%] rounded-2xl px-4 py-2.5 text-sm wrap-break-word ${
-                    turn.role === "user" ? "bg-brand-600 text-white" : "bg-stone-100 text-stone-800"
+                  className={`min-w-0 rounded-2xl px-4 py-3 text-sm wrap-break-word ${
+                    turn.role === "user" ? "max-w-[85%] bg-brand-600 text-white" : "max-w-full bg-stone-100 text-stone-800"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{turn.text}</p>
+                  {turn.role === "assistant" ? <Markdown content={turn.text} /> : <p className="whitespace-pre-wrap">{turn.text}</p>}
                   {turn.toolRuns && turn.toolRuns.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5 border-t border-stone-200 pt-2">
                       {turn.toolRuns.map((run, runIndex) => (
