@@ -120,11 +120,10 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
 
       {activeBrand && <BrandStoreHeader brand={activeBrand} />}
 
+      <MobileFilters facets={listing.facets} listingTitle={listingTitle} total={listing.meta.total} />
+
       <div className="grid gap-8 lg:grid-cols-[250px_1fr]">
-        <div>
-          <MobileFilters facets={listing.facets} listingTitle={listingTitle} total={listing.meta.total} />
-          <div className="hidden lg:block">{filtersPanel}</div>
-        </div>
+        <div className="hidden lg:block">{filtersPanel}</div>
 
         <div>
           <div className="mb-4 flex items-center justify-end">

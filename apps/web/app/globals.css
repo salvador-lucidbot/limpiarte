@@ -37,6 +37,7 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   --floating-action-offset: 4.75rem;
+  --store-header-offset: 3.5rem;
 }
 
 body[data-mobile-cta="true"] {

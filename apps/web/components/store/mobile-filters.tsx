@@ -15,6 +15,20 @@ export function MobileFilters({ facets, listingTitle, total }: MobileFiltersProp
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    const header = document.querySelector<HTMLElement>("[data-store-header]");
+    if (!header) return;
+
+    const syncOffset = (): void => {
+      document.body.style.setProperty("--store-header-offset", `${header.offsetHeight}px`);
+    };
+
+    syncOffset();
+    const observer = new ResizeObserver(syncOffset);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
@@ -22,17 +36,17 @@ export function MobileFilters({ facets, listingTitle, total }: MobileFiltersProp
   }, [open]);
 
   return (
-    <div className="lg:hidden">
-      <div className="flex items-center justify-between">
+    <div className="sticky top-[var(--store-header-offset)] z-30 -mx-4 mb-4 border-b border-line bg-surface/95 px-4 py-2.5 backdrop-blur lg:hidden">
+      <div className="flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+          className="flex shrink-0 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-brand-300 hover:text-brand-800"
         >
           <IconFilter size={16} />
           Filtrar
         </button>
-        <p className="text-sm text-slate-400">{total} resultado{total === 1 ? "" : "s"}</p>
+        <p className="min-w-0 truncate text-sm text-slate-500">{total} resultado{total === 1 ? "" : "s"}</p>
       </div>
 
       {open && (

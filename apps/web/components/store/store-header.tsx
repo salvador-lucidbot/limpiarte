@@ -75,7 +75,7 @@ export function StoreHeader({ categories, storeName, announcements }: StoreHeade
   const barMessages = announcements.length > 0 ? announcements : ["Envíos a las principales ciudades de Colombia"];
 
   return (
-    <header className="sticky top-0 z-40 shadow-sm">
+    <header data-store-header className="sticky top-0 z-40 shadow-sm">
       <div className="hidden bg-navy-900 text-white/80 sm:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-1.5 text-xs">
           <AnnouncementBar announcements={barMessages} />
