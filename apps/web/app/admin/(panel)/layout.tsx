@@ -1,142 +1,93 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import {
-  IconBot,
-  IconBoxes,
-  IconChart,
-  IconClipboardList,
-  IconFileText,
-  IconGrid,
-  IconHelpCircle,
-  IconImage,
-  IconLogOut,
-  IconPackage,
-  IconPlug,
-  IconProps,
-  IconSettings,
-  IconSparkles,
-  IconShieldCheck,
-  IconStar,
-  IconStore,
-  IconTag,
-  IconTruck,
-  IconUsers
-} from "../../../components/icons";
-import { Logo } from "../../../components/logo";
-import { useAdminAuth } from "../../../lib/auth/admin-auth-context";
-import { AdminDialogProvider } from "../../../lib/admin/dialog-context";
+import { useEffect, useMemo, useState } from "react";
+import { Toaster } from "sonner";
 import { Loader } from "../../../components/loader";
-
-interface NavItem {
-  href: string;
-  label: string;
-  icon: (props: IconProps) => React.ReactNode;
-  permission: string | null;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { href: "/admin/dashboard", label: "Tablero", icon: IconChart, permission: "dashboard.view" },
-  { href: "/admin/productos", label: "Productos", icon: IconPackage, permission: "catalog.manage" },
-  { href: "/admin/categorias", label: "Categorías", icon: IconGrid, permission: "catalog.manage" },
-  { href: "/admin/marcas", label: "Marcas", icon: IconStore, permission: "catalog.manage" },
-  { href: "/admin/inventario", label: "Inventario", icon: IconBoxes, permission: "catalog.manage" },
-  { href: "/admin/pedidos", label: "Pedidos", icon: IconClipboardList, permission: "orders.view" },
-  { href: "/admin/clientes", label: "Clientes", icon: IconUsers, permission: "customers.view" },
-  { href: "/admin/cupones", label: "Cupones", icon: IconTag, permission: "marketing.manage" },
-  { href: "/admin/moderacion", label: "Reseñas y preguntas", icon: IconStar, permission: "content.manage" },
-  { href: "/admin/contenido", label: "Contenido", icon: IconImage, permission: "content.manage" },
-  { href: "/admin/envios", label: "Envíos", icon: IconTruck, permission: "settings.manage" },
-  { href: "/admin/usuarios", label: "Usuarios y roles", icon: IconShieldCheck, permission: "users.manage" },
-  { href: "/admin/lucidbot", label: "LucidBot", icon: IconBot, permission: "integration.manage" },
-  { href: "/admin/integraciones", label: "Integraciones", icon: IconPlug, permission: "integration.manage" },
-  { href: "/admin/asistente", label: "Asistente", icon: IconSparkles, permission: "integration.manage" },
-  { href: "/admin/configuracion", label: "Configuración", icon: IconSettings, permission: "settings.manage" },
-  { href: "/admin/auditoria", label: "Auditoría", icon: IconFileText, permission: "audit.view" }
-];
-
-/** Visible para todo el equipo, sin permiso: es la documentación de uso y de la operación. */
-const HELP_ITEM: NavItem = {
-  href: "/admin/manual",
-  label: "Manual de funciones",
-  icon: IconHelpCircle,
-  permission: null
-};
+import { Logo } from "../../../components/logo";
+import { AdminBreadcrumbs, AdminTopbar } from "../../../components/admin/shell/admin-topbar";
+import { SectionPanel } from "../../../components/admin/shell/section-panel";
+import { SectionRail } from "../../../components/admin/shell/section-rail";
+import { AdminDialogProvider } from "../../../lib/admin/dialog-context";
+import { findOptionByPath, findSectionByPath, visibleSections } from "../../../lib/admin/navigation";
+import { useAdminAuth } from "../../../lib/auth/admin-auth-context";
 
 export default function AdminPanelLayout({ children }: { children: React.ReactNode }): React.ReactNode {
   const { user, ready, hasPermission, logout } = useAdminAuth();
   const router = useRouter();
   const pathname = usePathname();
 
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const sections = useMemo(() => visibleSections(hasPermission), [hasPermission]);
+  const currentSection = useMemo(() => findSectionByPath(sections, pathname), [sections, pathname]);
+  const currentOption = useMemo(() => findOptionByPath(sections, pathname), [sections, pathname]);
+
   useEffect(() => {
     if (ready && !user) router.push("/admin/login");
   }, [ready, router, user]);
 
-  if (!ready || !user) {
-    return <Loader fullScreen className="min-h-screen" size="lg" />;
-  }
+  useEffect(() => {
+    if (currentSection) setSelectedKey(currentSection.key);
+  }, [currentSection]);
 
-  const visibleItems = NAV_ITEMS.filter((item) => item.permission === null || hasPermission(item.permission));
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  if (!ready || !user) return <Loader fullScreen className="min-h-dvh" size="lg" />;
+
+  const activeKey = selectedKey ?? currentSection?.key ?? sections[0]?.key ?? "";
+  const activeSection = sections.find((section) => section.key === activeKey) ?? sections[0] ?? null;
+
+  function selectSection(key: string): void {
+    setSelectedKey(key);
+    const section = sections.find((item) => item.key === key);
+    if (!section) return;
+    if (section.options.length === 1) router.push(section.options[0].href);
+  }
 
   return (
     <AdminDialogProvider>
-    <div className="flex min-h-screen bg-stone-100">
-      <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col bg-navy-900 text-stone-300">
-        <div className="border-b border-white/10 px-5 py-4">
-          <Logo variant="white" height={26} />
-          <p className="mt-1 text-xs uppercase tracking-wider text-stone-400">Panel de administración</p>
+      <div className="flex min-h-dvh bg-surface-subtle">
+        <aside className="hidden shrink-0 lg:sticky lg:top-0 lg:flex lg:h-dvh">
+          <div className="flex w-22 flex-col bg-brand-800 py-5 text-white">
+            <div className="mb-5 flex justify-center px-2">
+              <Logo variant="white" height={22} />
+            </div>
+            <SectionRail sections={sections} selectedKey={activeKey} currentKey={currentSection?.key ?? null} onSelect={selectSection} />
+          </div>
+          <SectionPanel section={activeSection} pathname={pathname} />
+        </aside>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <AdminTopbar user={user} menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((open) => !open)} onLogout={logout} />
+
+          {menuOpen && (
+            <div className="border-b border-ink-200 bg-white lg:hidden">
+              {sections.map((section) => (
+                <details key={section.key} open={section.key === currentSection?.key} className="border-b border-ink-100 last:border-0">
+                  <summary className="flex cursor-pointer items-center gap-2.5 px-4 py-3 text-sm font-bold text-brand-900">
+                    <section.icon size={17} aria-hidden="true" className="shrink-0 text-brand-700" />
+                    {section.label}
+                  </summary>
+                  <div className="pb-2">
+                    <SectionPanel section={section} pathname={pathname} onNavigate={() => setMenuOpen(false)} />
+                  </div>
+                </details>
+              ))}
+            </div>
+          )}
+
+          <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 has-[[data-page-width=full]]:max-w-none sm:px-6 lg:px-8">
+            <AdminBreadcrumbs section={currentSection} option={currentOption} />
+            {children}
+          </main>
         </div>
-        <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-          {visibleItems.map((item) => {
-            const isActive = pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
-                  isActive ? "bg-brand-500 font-semibold text-white" : "hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                <item.icon size={17} className={isActive ? "text-white" : "text-stone-400"} />
-                {item.label}
-              </Link>
-            );
-          })}
+      </div>
 
-          <span className="my-2 block border-t border-white/10" />
-
-          <Link
-            href={HELP_ITEM.href}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
-              pathname.startsWith(HELP_ITEM.href)
-                ? "bg-brand-500 font-semibold text-white"
-                : "hover:bg-white/10 hover:text-white"
-            }`}
-          >
-            <HELP_ITEM.icon size={17} className={pathname.startsWith(HELP_ITEM.href) ? "text-white" : "text-stone-400"} />
-            {HELP_ITEM.label}
-          </Link>
-        </nav>
-        <div className="border-t border-white/10 p-4">
-          <p className="truncate text-sm font-medium text-white">
-            {user.firstName} {user.lastName}
-          </p>
-          <p className="truncate text-xs text-stone-400">{user.isSuperadmin ? "Superadministrador" : (user.roleName ?? "")}</p>
-          <button
-            type="button"
-            onClick={logout}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-sm transition hover:bg-white/20"
-          >
-            <IconLogOut size={15} />
-            Cerrar sesión
-          </button>
-        </div>
-      </aside>
-
-      <div className="ml-60 flex-1 p-8">{children}</div>
-    </div>
+      <Toaster position="top-right" richColors closeButton duration={5000} />
     </AdminDialogProvider>
   );
 }

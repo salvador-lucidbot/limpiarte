@@ -3,7 +3,7 @@
 import { IconPlus } from "../../icons";
 import { createLocalKey, moveByKey, patchByKey, removeByKey } from "../list-editing";
 import { RowControls } from "../row-controls";
-import { Button, Card, Field, inputClass } from "../ui";
+import { Button, Card, Field, inputClass, textareaClass } from "../ui";
 import { fieldSetter } from "./product-form-model";
 import type { ProductFormFaq, ProductFormUpdater, ProductFormValue } from "./product-form-model";
 
@@ -18,7 +18,7 @@ export function TechnicalSheetSection({ value, onUpdate }: TextSectionsProps): R
     <Card id="producto-ficha" title="Descripción y ficha técnica">
       <div className="grid gap-4">
         <Field label="Descripción larga">
-          <textarea rows={5} value={value.description} onChange={(event) => set("description", event.target.value)} className={inputClass} />
+          <textarea rows={5} value={value.description} onChange={(event) => set("description", event.target.value)} className={textareaClass} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Presentación">
@@ -29,13 +29,13 @@ export function TechnicalSheetSection({ value, onUpdate }: TextSectionsProps): R
           </Field>
         </div>
         <Field label="Rendimiento">
-          <textarea rows={2} value={value.performance} onChange={(event) => set("performance", event.target.value)} className={inputClass} />
+          <textarea rows={2} value={value.performance} onChange={(event) => set("performance", event.target.value)} className={textareaClass} />
         </Field>
         <Field label="Modo de uso">
-          <textarea rows={2} value={value.usageInstructions} onChange={(event) => set("usageInstructions", event.target.value)} className={inputClass} />
+          <textarea rows={2} value={value.usageInstructions} onChange={(event) => set("usageInstructions", event.target.value)} className={textareaClass} />
         </Field>
         <Field label="Precauciones">
-          <textarea rows={2} value={value.precautions} onChange={(event) => set("precautions", event.target.value)} className={inputClass} />
+          <textarea rows={2} value={value.precautions} onChange={(event) => set("precautions", event.target.value)} className={textareaClass} />
         </Field>
         <p className="text-xs text-stone-400">
           La descripción va en «Descripción del producto»; el resto forma la ficha técnica de «Información del producto» (modo de uso y precauciones se
@@ -111,7 +111,7 @@ export function SeoSection({ value, onUpdate }: TextSectionsProps): React.ReactN
           <input value={value.seoTitle} onChange={(event) => set("seoTitle", event.target.value)} className={inputClass} />
         </Field>
         <Field label="Meta descripción">
-          <textarea rows={2} value={value.seoDescription} onChange={(event) => set("seoDescription", event.target.value)} className={inputClass} />
+          <textarea rows={2} value={value.seoDescription} onChange={(event) => set("seoDescription", event.target.value)} className={textareaClass} />
         </Field>
         <Field label="Etiquetas (separadas por coma)">
           <input placeholder="desinfectante, multiusos" value={value.tags} onChange={(event) => set("tags", event.target.value)} className={inputClass} />

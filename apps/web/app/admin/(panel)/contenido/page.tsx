@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ImageUrlField } from "../../../../components/admin/image-upload";
 import { slugify } from "../../../../components/admin/slugify";
-import { Badge, Button, Card, EmptyState, Field, inputClass, Table } from "../../../../components/admin/ui";
+import { Badge, Button, Card, EmptyState, Field, inputClass, Table, textareaClass } from "../../../../components/admin/ui";
 import { IconFileText, IconImage, IconMail, IconMenu, IconPause, IconPencil, IconPlay, IconTrash } from "../../../../components/icons";
 import { useAdminGet, useAdminRequest } from "../../../../lib/admin/use-admin-api";
 import { useSaving } from "../../../../lib/admin/use-saving";
@@ -266,7 +266,7 @@ function PagesTab(): React.ReactNode {
             <input value={form.slug} onChange={(event) => setForm({ ...form, slug: slugify(event.target.value) })} className={inputClass} />
           </Field>
           <Field label="Contenido (HTML) *">
-            <textarea required rows={10} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} className={`${inputClass} font-mono text-xs`} />
+            <textarea required rows={10} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} className={`${textareaClass} font-mono text-xs`} />
           </Field>
           <div className="flex gap-2">
             <Button type="submit" loading={pending === "form"}>{editingId ? "Guardar" : "Crear"}</Button>
@@ -364,7 +364,7 @@ function BlogTab(): React.ReactNode {
             hint="1200×675 px (16:9)."
           />
           <Field label="Contenido (HTML) *">
-            <textarea required rows={8} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} className={`${inputClass} font-mono text-xs`} />
+            <textarea required rows={8} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} className={`${textareaClass} font-mono text-xs`} />
           </Field>
           <Field label="Estado">
             <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} className={inputClass}>
