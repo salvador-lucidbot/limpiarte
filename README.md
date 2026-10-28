@@ -100,11 +100,15 @@ Monorepo pnpm con dos aplicaciones desacopladas: `apps/api` (REST API NestJS con
 6. **Integraciones (`apps/api/src/modules/integrations/`, `/admin/integraciones`)**:
    - Credenciales de Claude (Anthropic) y de Meta Ads administradas desde el panel, cifradas con AES-256-GCM en la base y nunca devueltas: la pantalla solo indica si existen. Cada una se puede activar, desactivar y probar contra el servicio real, y el resultado queda con fecha y mensaje de error.
 
-7. **Usuarios, roles y permisos (`apps/api/src/modules/users/`, `roles/`, `common/guards/`)**:
+7. **Asistente de IA (`apps/api/src/modules/assistant/`, `/admin/asistente`)**:
+   - Claude con acceso a las campañas de Meta y a los datos reales de la tienda. Lee campañas y su rendimiento, costea productos contra el margen real y resume ventas; compara lo que Meta reporta como compras con los pedidos que de verdad entraron.
+   - Solo lee, salvo que se marque «Permitir cambios»: entonces puede pausar o reactivar campañas, exigiendo un motivo que queda en la auditoría.
+
+8. **Usuarios, roles y permisos (`apps/api/src/modules/users/`, `roles/`, `common/guards/`)**:
    - Login administrativo con contraseña + segundo factor por correo, bloqueo por intentos fallidos y cierre de sesión por expiración de JWT.
    - RBAC con 14 permisos y 6 roles sembrados (Administrador, Gestor de catálogo, Gestor de pedidos, Servicio al cliente, Marketing, Auditor), overrides por usuario, tope de 15 usuarios internos activos y Superadmin único.
 
-8. **Integración LucidBot (`apps/api/src/modules/lucidbot/`)**:
+9. **Integración LucidBot (`apps/api/src/modules/lucidbot/`)**:
    - Conexión asistida desde el Superadmin (URL de webhook + clave cifrada AES-256-GCM, prueba de conectividad, indicador de estado) sin intervención técnica.
    - 9 eventos activables individualmente (carrito abandonado con temporizador, pedido creado, pago aprobado/rechazado, cambios de estado, despacho, entrega, cliente registrado, solicitud de contacto), log histórico con reintentos automáticos cada 10 minutos.
 

@@ -15,6 +15,7 @@ import { ContactModule } from "./modules/contact/contact.module";
 import { CouponsModule } from "./modules/coupons/coupons.module";
 import { CustomersModule } from "./modules/customers/customers.module";
 import { InventoryModule } from "./modules/inventory/inventory.module";
+import { AssistantModule } from "./modules/assistant/assistant.module";
 import { IntegrationsModule } from "./modules/integrations/integrations.module";
 import { LucidBotModule } from "./modules/lucidbot/lucidbot.module";
 import { MailModule } from "./modules/mail/mail.module";
@@ -39,6 +40,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     AuditModule,
     LucidBotModule,
     IntegrationsModule,
+    AssistantModule,
     AuthModule,
     UsersModule,
     RolesModule,
