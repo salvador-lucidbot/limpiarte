@@ -49,28 +49,23 @@ export interface CartView {
   suggestions: CartSuggestion[];
 }
 
-type CartWithItems = Prisma.CartGetPayload<{
-  include: {
-    coupon: true;
-    items: {
-      include: {
-        product: { include: { images: true } };
-        variant: { include: { optionValues: { include: { optionValue: true } } } };
-      };
-    };
-  };
-}>;
-
 const CART_INCLUDE = {
   coupon: true,
   items: {
     include: {
-      product: { include: { images: { orderBy: { position: "asc" }, take: 1 } } },
+      product: {
+        include: {
+          images: { orderBy: [{ isCover: "desc" }, { position: "asc" }], take: 1 },
+          offerPacks: { select: { quantity: true, price: true } }
+        }
+      },
       variant: { include: { optionValues: { include: { optionValue: true } } } }
     },
     orderBy: { createdAt: "asc" }
   }
 } satisfies Prisma.CartInclude;
+
+type CartWithItems = Prisma.CartGetPayload<{ include: typeof CART_INCLUDE }>;
 
 const FREE_SHIPPING_CACHE_MS = 60_000;
 const SUGGESTIONS_CACHE_MS = 300_000;
@@ -134,7 +129,8 @@ export class CartService {
       this.prisma.product.findFirst({
         where: { id: productId, deletedAt: null, status: ProductStatus.ACTIVE },
         include: {
-          images: { orderBy: { position: "asc" }, take: 1 },
+          images: { orderBy: [{ isCover: "desc" }, { position: "asc" }], take: 1 },
+          offerPacks: { select: { quantity: true, price: true } },
           variants: { include: { optionValues: { include: { optionValue: true } } } }
         }
       })

@@ -1,11 +1,37 @@
 import { Injectable } from "@nestjs/common";
-import { Product, ProductVariant } from "../../generated/prisma/client";
+import { Prisma, Product, ProductVariant } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 
 export interface EffectivePrice {
   price: number;
   compareAtPrice: number | null;
   onPromo: boolean;
+}
+
+export interface PackPrice {
+  quantity: number;
+  price: number;
+}
+
+export type PricedProduct = Product & {
+  offerPacks?: { quantity: number; price: Prisma.Decimal }[];
+};
+
+function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function cheapestCombination(unitPrice: number, quantity: number, packs: PackPrice[]): number {
+  const best: number[] = [0];
+  for (let units = 1; units <= quantity; units += 1) {
+    let candidate = best[units - 1] + unitPrice;
+    for (const pack of packs) {
+      if (pack.quantity > units) continue;
+      candidate = Math.min(candidate, best[units - pack.quantity] + pack.price);
+    }
+    best.push(candidate);
+  }
+  return best[quantity];
 }
 
 export interface BundlePromo {
@@ -44,7 +70,15 @@ export class PricingService {
     return { price, compareAtPrice, onPromo: promo !== null && promo < base };
   }
 
-  resolveBundle(product: Product, quantity: number): BundlePromo | null {
+  packPrices(product: PricedProduct): PackPrice[] {
+    if (!product.offerPacks) return [];
+    return product.offerPacks
+      .map((pack) => ({ quantity: pack.quantity, price: Number(pack.price) }))
+      .filter((pack) => pack.quantity > 0 && Number.isFinite(pack.price) && pack.price >= 0);
+  }
+
+  resolveBundle(product: PricedProduct, quantity: number): BundlePromo | null {
+    if (this.packPrices(product).length > 0) return null;
     const buyQuantity = product.promoBuyQuantity ?? 0;
     if (buyQuantity <= 0) return null;
 
@@ -62,15 +96,17 @@ export class PricingService {
     };
   }
 
-  chargedUnits(product: Product, quantity: number): number {
+  chargedUnits(product: PricedProduct, quantity: number): number {
     const bundle = this.resolveBundle(product, quantity);
     if (!bundle) return quantity;
     return bundle.chargedUnits;
   }
 
-  lineTotal(product: Product, variant: ProductVariant | null, quantity: number): number {
+  lineTotal(product: PricedProduct, variant: ProductVariant | null, quantity: number): number {
     const { price } = this.resolve(product, variant);
-    return Math.round(price * this.chargedUnits(product, quantity) * 100) / 100;
+    const packs = this.packPrices(product);
+    if (packs.length > 0) return roundMoney(cheapestCombination(price, quantity, packs));
+    return roundMoney(price * this.chargedUnits(product, quantity));
   }
 
   async resolveForQuantity(
