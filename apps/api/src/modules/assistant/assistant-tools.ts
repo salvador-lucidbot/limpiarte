@@ -24,7 +24,7 @@ export const READ_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
     input_schema: {
       type: "object",
       properties: {
-        limite: { type: "integer", minimum: 1, maximum: 50, description: "Cuántas campañas traer. Por defecto 25." }
+        limite: { type: "integer", description: "Cuántas campañas traer, entre 1 y 50. Por defecto 25." }
       },
       required: ["limite"],
       additionalProperties: false
@@ -71,7 +71,7 @@ export const READ_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
     input_schema: {
       type: "object",
       properties: {
-        dias: { type: "integer", minimum: 1, maximum: 365, description: "Cuántos días hacia atrás. Por defecto 30." }
+        dias: { type: "integer", description: "Cuántos días hacia atrás, entre 1 y 365. Por defecto 30." }
       },
       required: ["dias"],
       additionalProperties: false

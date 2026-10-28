@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic, { APIError } from "@anthropic-ai/sdk";
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { IntegrationProvider, OrderStatus, User } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -81,7 +81,7 @@ export class AssistantService {
     const toolRuns: ToolRunRecord[] = [];
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-      const response = await client.messages.create({
+      const response = await this.callModel(client, {
         model: config.model ?? DEFAULT_ANTHROPIC_MODEL,
         max_tokens: MAX_OUTPUT_TOKENS,
         system: this.buildSystemPrompt(allowWrites),
@@ -111,6 +111,42 @@ export class AssistantService {
       toolRuns,
       stoppedEarly: true
     };
+  }
+
+  private async callModel(client: Anthropic, params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> {
+    try {
+      return await client.messages.create(params);
+    } catch (error) {
+      throw this.translateApiError(error);
+    }
+  }
+
+  private translateApiError(error: unknown): Error {
+    if (!(error instanceof APIError)) {
+      const detail = error instanceof Error ? error.message : "causa desconocida";
+      this.logger.error(`Fallo al contactar a Claude: ${detail}`);
+      return new BadRequestException("No se pudo contactar a Claude desde el servidor.");
+    }
+
+    this.logger.error(`Claude respondió ${error.status}: ${this.readApiMessage(error)}`);
+
+    if (error.status === 401) return new BadRequestException("Claude rechazó la clave de API: revísala en Integraciones.");
+    if (error.status === 403) return new BadRequestException("La clave de API no tiene permiso para usar este modelo.");
+    if (error.status === 429) return new BadRequestException("La cuenta de Anthropic llegó a su límite de uso. Intenta en unos minutos.");
+    if (error.status === 400) return new BadRequestException(`Claude rechazó la solicitud: ${this.readApiMessage(error)}`);
+
+    return new BadRequestException("Claude no está respondiendo en este momento. Intenta de nuevo.");
+  }
+
+  private readApiMessage(error: APIError): string {
+    const body: unknown = error.error;
+    if (typeof body !== "object" || body === null || !("error" in body)) return error.message;
+
+    const inner = body.error;
+    if (typeof inner !== "object" || inner === null || !("message" in inner)) return error.message;
+    if (typeof inner.message !== "string") return error.message;
+
+    return inner.message;
   }
 
   private buildSystemPrompt(allowWrites: boolean): string {
@@ -224,7 +260,8 @@ export class AssistantService {
     };
   }
 
-  private async salesSummary(days: number): Promise<unknown> {
+  private async salesSummary(requestedDays: number): Promise<unknown> {
+    const days = Math.min(Math.max(requestedDays, 1), 365);
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     const where = { createdAt: { gte: since }, status: { in: PAID_ORDER_STATUSES } };
 
