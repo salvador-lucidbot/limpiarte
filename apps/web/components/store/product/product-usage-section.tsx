@@ -1,6 +1,7 @@
 import { IconFileText } from "../../icons";
 import { LazyProductVideo } from "./lazy-product-video";
-import { PRODUCT_SECTION_CLASS, PRODUCT_SECTION_TITLE_CLASS } from "./section-styles";
+import { SectionHeading } from "./section-heading";
+import { PRODUCT_SECTION_CLASS } from "./section-styles";
 import type { ProductUsageMediaView } from "../../../lib/api/types";
 
 interface ProductUsageSectionProps {
@@ -8,9 +9,10 @@ interface ProductUsageSectionProps {
   instructions: string | null;
   productName: string;
   fallbackPosterUrl: string | null;
+  title?: string | null;
 }
 
-function UsageMedia({ media, productName, fallbackPosterUrl }: Omit<ProductUsageSectionProps, "instructions">): React.ReactNode {
+function UsageMedia({ media, productName, fallbackPosterUrl }: Omit<ProductUsageSectionProps, "instructions" | "title">): React.ReactNode {
   if (!media) return null;
 
   if (media.kind === "VIDEO") {
@@ -55,7 +57,8 @@ export function ProductUsageSection({
   media,
   instructions,
   productName,
-  fallbackPosterUrl
+  fallbackPosterUrl,
+  title = null
 }: ProductUsageSectionProps): React.ReactNode {
   if (!media) return null;
 
@@ -63,10 +66,12 @@ export function ProductUsageSection({
 
   return (
     <section id="modo-de-uso" aria-labelledby="modo-de-uso-titulo" className={PRODUCT_SECTION_CLASS}>
-      <h2 id="modo-de-uso-titulo" className={PRODUCT_SECTION_TITLE_CLASS}>
-        Modo de uso
-      </h2>
-      <p className="mt-0.5 text-sm text-slate-600">Cómo aplicar el producto para obtener el mejor resultado.</p>
+      <SectionHeading
+        id="modo-de-uso-titulo"
+        title={title}
+        fallbackTitle="Modo de uso"
+        fallbackSubtitle="Cómo aplicar el producto para obtener el mejor resultado."
+      />
       <div className="mt-4 grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         <UsageMedia media={media} productName={productName} fallbackPosterUrl={fallbackPosterUrl} />
         {text.length > 0 && (

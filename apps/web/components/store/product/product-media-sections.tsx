@@ -3,24 +3,23 @@ import type { ProductDocumentView, ProductVideoView } from "../../../lib/api/typ
 import { IconFileText } from "../../icons";
 import { LazyProductVideo } from "./lazy-product-video";
 import { describeDuration, formatDuration, formatFileSize } from "./product-format";
-import { PRODUCT_SECTION_CLASS, PRODUCT_SECTION_TITLE_CLASS } from "./section-styles";
+import { SectionHeading } from "./section-heading";
+import { PRODUCT_SECTION_CLASS } from "./section-styles";
 
 interface ProductVideosSectionProps {
   videos: ProductVideoView[];
   productName: string;
   storeName: string;
   fallbackPosterUrl: string | null;
+  title?: string | null;
 }
 
-export function ProductVideosSection({ videos, productName, storeName, fallbackPosterUrl }: ProductVideosSectionProps): React.ReactNode {
+export function ProductVideosSection({ videos, productName, storeName, fallbackPosterUrl, title = null }: ProductVideosSectionProps): React.ReactNode {
   if (videos.length === 0) return null;
 
   return (
     <section id="videos" aria-labelledby="videos-titulo" className={PRODUCT_SECTION_CLASS}>
-      <h2 id="videos-titulo" className={PRODUCT_SECTION_TITLE_CLASS}>
-        Videos
-      </h2>
-      <p className="mt-0.5 text-sm text-slate-600">Videos de este producto</p>
+      <SectionHeading id="videos-titulo" title={title} fallbackTitle="Videos" fallbackSubtitle="Videos de este producto" />
       <ul className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {videos.map((video, index) => {
           const title = video.title ?? `Video ${index + 1} de ${productName}`;
@@ -55,17 +54,20 @@ export function ProductVideosSection({ videos, productName, storeName, fallbackP
 
 interface ProductDocumentsSectionProps {
   documents: ProductDocumentView[];
+  title?: string | null;
 }
 
-export function ProductDocumentsSection({ documents }: ProductDocumentsSectionProps): React.ReactNode {
+export function ProductDocumentsSection({ documents, title = null }: ProductDocumentsSectionProps): React.ReactNode {
   if (documents.length === 0) return null;
 
   return (
     <section id="documentos" aria-labelledby="documentos-titulo" className={PRODUCT_SECTION_CLASS}>
-      <h2 id="documentos-titulo" className={PRODUCT_SECTION_TITLE_CLASS}>
-        Documentos
-      </h2>
-      <p className="mt-0.5 text-sm text-slate-600">Fichas técnicas, hojas de seguridad y manuales en PDF.</p>
+      <SectionHeading
+        id="documentos-titulo"
+        title={title}
+        fallbackTitle="Documentos"
+        fallbackSubtitle="Fichas técnicas, hojas de seguridad y manuales en PDF."
+      />
       <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {documents.map((pdf) => {
           const size = formatFileSize(pdf.sizeBytes);

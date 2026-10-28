@@ -70,7 +70,13 @@ export type ProductSpecGroup = "DETALLES" | "MEDIDAS" | "ESTILO" | "CARACTERISTI
 
 export type ProductDocumentKind = "FICHA_TECNICA" | "HOJA_SEGURIDAD" | "MANUAL" | "CERTIFICADO" | "OTRO";
 
-export type ContentBlockLayout = "IMAGEN_COMPLETA" | "IMAGEN_IZQUIERDA" | "IMAGEN_DERECHA" | "GRILLA";
+export type ContentBlockLayout =
+  | "IMAGEN_COMPLETA"
+  | "IMAGEN_IZQUIERDA"
+  | "IMAGEN_DERECHA"
+  | "GRILLA"
+  | "TEXTO_SOBRE_IMAGEN"
+  | "CARRUSEL";
 
 export type ContentBlockSource = "PRODUCT" | "BRAND";
 
@@ -110,7 +116,9 @@ export const CONTENT_BLOCK_LAYOUT_LABELS: Record<ContentBlockLayout, string> = {
   IMAGEN_COMPLETA: "Imagen a todo el ancho",
   IMAGEN_IZQUIERDA: "Imagen a la izquierda y texto",
   IMAGEN_DERECHA: "Imagen a la derecha y texto",
-  GRILLA: "Celda de grilla"
+  GRILLA: "Celda de grilla",
+  TEXTO_SOBRE_IMAGEN: "Texto sobre la imagen",
+  CARRUSEL: "Carrusel al desplazar"
 };
 
 export const PRODUCT_RELATION_TYPE_LABELS: Record<ProductRelationType, string> = {

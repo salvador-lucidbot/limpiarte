@@ -21,6 +21,7 @@ import { ProductHeading } from "../../../../components/store/product/product-hea
 import { ProductInformation } from "../../../../components/store/product/product-information";
 import { buildInformationColumns, buildKeyAttributeRows } from "../../../../components/store/product/product-information-data";
 import { ProductMediaGallery } from "../../../../components/store/product/product-media-gallery";
+import { ProductOfferPacks } from "../../../../components/store/product/product-offer-packs";
 import { ProductDocumentsSection, ProductVideosSection } from "../../../../components/store/product/product-media-sections";
 import { ProductPriceBlock } from "../../../../components/store/product/product-price-block";
 import { ProductSelectionProvider } from "../../../../components/store/product/product-selection-context";
@@ -169,7 +170,13 @@ export default async function ProductPage({ params }: { params: Params }): Promi
 
           <div className="min-w-0 space-y-4 md:col-start-2 md:row-start-4 xl:row-start-3">
             <KeyAttributesTable leadingRows={keyAttributes.leading} trailingRows={keyAttributes.trailing} />
-            <ProductAboutItem highlights={product.highlights} summary={descriptionLayout.summary} showDetailsLink={hasInformation} />
+            <ProductAboutItem
+              highlights={product.highlights}
+              summary={descriptionLayout.summary}
+              showDetailsLink={hasInformation}
+              title={product.sectionTitles.highlights}
+              subtitle={product.sectionTitles.highlightsSubtitle}
+            />
             <p className="text-xs text-slate-600">
               ¿Encontraste un error en esta ficha?{" "}
               <Link href="/contacto" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
@@ -178,6 +185,8 @@ export default async function ProductPage({ params }: { params: Params }): Promi
             </p>
           </div>
         </div>
+
+        <ProductOfferPacks packs={product.offerPacks} productName={product.name} fallbackImageUrl={product.images[0]?.url ?? null} />
       </ProductSelectionProvider>
 
       <Suspense fallback={<CarouselSkeleton />}>
@@ -189,12 +198,18 @@ export default async function ProductPage({ params }: { params: Params }): Promi
         />
       </Suspense>
 
-      <ProductContentSections blocks={product.contentBlocks} paragraphs={descriptionLayout.bodyParagraphs} brand={product.brand} />
+      <ProductContentSections
+        blocks={product.contentBlocks}
+        paragraphs={descriptionLayout.bodyParagraphs}
+        brand={product.brand}
+        titles={product.sectionTitles}
+      />
       <ProductUsageSection
         media={product.usageMedia}
         instructions={product.technicalSheet.usageInstructions}
         productName={product.name}
         fallbackPosterUrl={product.images[0]?.url ?? null}
+        title={product.sectionTitles.usage}
       />
       <ProductInformation columns={informationColumns} />
       <ProductVideosSection
@@ -202,8 +217,9 @@ export default async function ProductPage({ params }: { params: Params }): Promi
         productName={product.name}
         storeName={extras.storeName}
         fallbackPosterUrl={product.images[0]?.url ?? null}
+        title={product.sectionTitles.videos}
       />
-      <ProductDocumentsSection documents={product.documents} />
+      <ProductDocumentsSection documents={product.documents} title={product.sectionTitles.documents} />
       <ProductFaqSection faqs={product.faqs} />
 
       <div id="opiniones" className={EMBEDDED_SECTION_CLASS}>

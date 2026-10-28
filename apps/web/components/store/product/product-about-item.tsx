@@ -1,13 +1,18 @@
 import type { DescriptionSummary } from "./description-summary";
 import { ExpandableList } from "./expandable-list";
 import { splitHighlight } from "./product-format";
+import { resolveSectionTitle } from "./section-heading";
 
 const COLLAPSED_BULLETS = 5;
+
+const DEFAULT_TITLE = "Sobre este artículo";
 
 interface ProductAboutItemProps {
   highlights: string[];
   summary: DescriptionSummary | null;
   showDetailsLink: boolean;
+  title?: string | null;
+  subtitle?: string | null;
 }
 
 function DetailsLink(): React.ReactNode {
@@ -31,7 +36,8 @@ function HighlightItem({ text }: { text: string }): React.ReactNode {
   );
 }
 
-export function ProductAboutItem({ highlights, summary, showDetailsLink }: ProductAboutItemProps): React.ReactNode {
+export function ProductAboutItem({ highlights, summary, showDetailsLink, title = null, subtitle = null }: ProductAboutItemProps): React.ReactNode {
+  const subtitleText = subtitle?.trim() ?? "";
   const bullets = highlights.map((highlight) => highlight.trim()).filter((highlight) => highlight.length > 0);
 
   if (bullets.length === 0 && !summary) {
@@ -45,9 +51,10 @@ export function ProductAboutItem({ highlights, summary, showDetailsLink }: Produ
 
   return (
     <section aria-labelledby="sobre-este-articulo" className="border-t border-line pt-4">
-      <h2 id="sobre-este-articulo" className="text-base font-bold text-ink">
-        Sobre este artículo
+      <h2 id="sobre-este-articulo" className="text-base font-bold text-ink wrap-break-word">
+        {resolveSectionTitle(title, DEFAULT_TITLE)}
       </h2>
+      {subtitleText && <p className="mt-0.5 text-sm text-slate-600 wrap-break-word">{subtitleText}</p>}
       {bullets.length > 0 && (
         <div className="mt-2">
           <ExpandableList

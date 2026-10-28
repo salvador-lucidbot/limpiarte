@@ -14,7 +14,7 @@ export function SectionHeading({ id, title, fallbackTitle, subtitle, fallbackSub
 
   return (
     <>
-      <h2 id={id} className={PRODUCT_SECTION_TITLE_CLASS}>
+      <h2 id={id} className={`${PRODUCT_SECTION_TITLE_CLASS} wrap-break-word`}>
         {resolvedTitle}
       </h2>
       {resolvedSubtitle && <p className="mt-0.5 text-sm text-slate-600 wrap-break-word">{resolvedSubtitle}</p>}

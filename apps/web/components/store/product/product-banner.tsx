@@ -50,22 +50,26 @@ function BannerFrame({ banner, productName, priority }: { banner: ProductBannerV
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-line bg-soft"
-      style={fixedHeight ? { height: `${banner.height}px` } : undefined}
+      className="relative grid grid-cols-1 overflow-hidden rounded-2xl border border-line bg-soft"
+      style={fixedHeight ? { minHeight: `${banner.height}px` } : undefined}
     >
       <img
         src={banner.url}
         alt={banner.alt ?? `Promoción de ${productName}`}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
-        className={fixedHeight ? "absolute inset-0 h-full w-full object-cover" : "block w-full"}
+        className={
+          fixedHeight ? "absolute inset-0 h-full w-full object-cover" : "col-start-1 row-start-1 block h-full w-full object-cover"
+        }
         style={{ objectPosition: FOCUS_POSITION[banner.focus ?? "CENTRO"] }}
       />
 
       {overlay > 0 && <div aria-hidden="true" className="absolute inset-0 bg-black" style={{ opacity: overlay }} />}
 
       {hasText(banner) && (
-        <div className={`absolute inset-0 flex flex-col justify-center gap-2 p-5 sm:p-8 lg:p-12 ${TEXT_ALIGN_CLASS[placement]} ${textTone}`}>
+        <div
+          className={`relative col-start-1 row-start-1 flex min-w-0 flex-col justify-center gap-2 p-5 sm:p-8 lg:p-12 ${TEXT_ALIGN_CLASS[placement]} ${textTone}`}
+        >
           {banner.title && (
             <p className="max-w-2xl text-2xl leading-tight font-extrabold wrap-break-word drop-shadow-sm sm:text-3xl lg:text-4xl">
               {banner.title}

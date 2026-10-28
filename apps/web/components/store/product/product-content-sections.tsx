@@ -1,29 +1,59 @@
 import Link from "next/link";
-import type { ContentBlockView, ProductBrandView } from "../../../lib/api/types";
+import type { ContentBlockLayout, ContentBlockView, ProductBrandView, ProductSectionTitles } from "../../../lib/api/types";
 import { brandInitials } from "./product-format";
-import { PRODUCT_SECTION_CLASS, PRODUCT_SECTION_TITLE_CLASS } from "./section-styles";
+import { SectionHeading } from "./section-heading";
+import { PRODUCT_SECTION_CLASS } from "./section-styles";
 
-type BlockGroup = { kind: "single"; key: string; block: ContentBlockView } | { kind: "grid"; key: string; blocks: ContentBlockView[] };
+type RenderableLayout = ContentBlockLayout | "TEXTO_SOBRE_IMAGEN" | "CARRUSEL";
+
+type GroupedLayout = Extract<RenderableLayout, "GRILLA" | "CARRUSEL">;
+
+type BlockGroup =
+  | { kind: "single"; key: string; block: ContentBlockView }
+  | { kind: "grid"; key: string; blocks: ContentBlockView[] }
+  | { kind: "carousel"; key: string; blocks: ContentBlockView[] };
+
+type ContentSectionTitles = Pick<ProductSectionTitles, "description" | "descriptionSubtitle" | "content">;
 
 interface ProductContentSectionsProps {
   blocks: ContentBlockView[];
   paragraphs: string[];
   brand: ProductBrandView | null;
+  titles?: ContentSectionTitles;
+}
+
+const EMPTY_TITLES: ContentSectionTitles = { description: null, descriptionSubtitle: null, content: null };
+
+const GROUP_KIND: Record<GroupedLayout, "grid" | "carousel"> = {
+  GRILLA: "grid",
+  CARRUSEL: "carousel"
+};
+
+const OVERLAY_GRADIENT_CLASS = "bg-linear-to-t from-black/85 via-black/45 to-transparent";
+
+function layoutOf(block: ContentBlockView): RenderableLayout {
+  return block.layout;
+}
+
+function isGroupedLayout(layout: RenderableLayout): layout is GroupedLayout {
+  return layout === "GRILLA" || layout === "CARRUSEL";
 }
 
 function groupBlocks(blocks: ContentBlockView[]): BlockGroup[] {
   const groups: BlockGroup[] = [];
   for (const block of blocks) {
+    const layout = layoutOf(block);
+    if (!isGroupedLayout(layout)) {
+      groups.push({ kind: "single", key: block.id, block });
+      continue;
+    }
+    const kind = GROUP_KIND[layout];
     const last = groups[groups.length - 1];
-    if (block.layout === "GRILLA" && last?.kind === "grid") {
+    if (last && last.kind === kind) {
       last.blocks.push(block);
       continue;
     }
-    if (block.layout === "GRILLA") {
-      groups.push({ kind: "grid", key: block.id, blocks: [block] });
-      continue;
-    }
-    groups.push({ kind: "single", key: block.id, block });
+    groups.push({ kind, key: block.id, blocks: [block] });
   }
   return groups;
 }
@@ -33,6 +63,10 @@ function gridColumnsClass(count: number): string {
   if (count === 2) return "grid-cols-2";
   if (count === 3) return "grid-cols-2 sm:grid-cols-3";
   return "grid-cols-2 lg:grid-cols-4";
+}
+
+function blockAlt(block: ContentBlockView): string {
+  return block.imageAlt ?? block.title ?? "";
 }
 
 function BlockText({ block, centered }: { block: ContentBlockView; centered: boolean }): React.ReactNode {
@@ -45,13 +79,39 @@ function BlockText({ block, centered }: { block: ContentBlockView; centered: boo
   );
 }
 
-function SingleBlock({ block }: { block: ContentBlockView }): React.ReactNode {
-  const alt = block.imageAlt ?? block.title ?? "";
+function TextOverImageBlock({ block }: { block: ContentBlockView }): React.ReactNode {
+  const hasText = Boolean(block.title || block.body);
 
-  if (block.layout === "IMAGEN_COMPLETA") {
+  return (
+    <figure className="relative isolate flex min-h-80 flex-col justify-end overflow-hidden rounded-2xl border border-line bg-navy-900 sm:min-h-96 lg:min-h-[28rem]">
+      <img
+        src={block.imageUrl}
+        alt={blockAlt(block)}
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 -z-10 h-full w-full object-cover"
+      />
+      {hasText && (
+        <figcaption className={`min-w-0 px-5 pt-20 pb-6 text-white wrap-break-word sm:px-8 sm:pb-8 lg:px-12 lg:pb-12 ${OVERLAY_GRADIENT_CLASS}`}>
+          <div className="max-w-2xl">
+            {block.title && <h3 className="text-2xl leading-tight font-extrabold drop-shadow-sm sm:text-3xl">{block.title}</h3>}
+            {block.body && <p className="mt-2 whitespace-pre-line leading-relaxed text-white/90 sm:text-lg">{block.body}</p>}
+          </div>
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+
+function SingleBlock({ block }: { block: ContentBlockView }): React.ReactNode {
+  const layout = layoutOf(block);
+
+  if (layout === "TEXTO_SOBRE_IMAGEN") return <TextOverImageBlock block={block} />;
+
+  if (layout === "IMAGEN_COMPLETA") {
     return (
       <figure className="overflow-hidden rounded-2xl border border-line bg-white">
-        <img src={block.imageUrl} alt={alt} loading="lazy" decoding="async" className="block h-auto w-full" />
+        <img src={block.imageUrl} alt={blockAlt(block)} loading="lazy" decoding="async" className="block h-auto w-full" />
         {(block.title || block.body) && (
           <figcaption className="px-6 py-6 sm:px-10">
             <BlockText block={block} centered />
@@ -61,17 +121,17 @@ function SingleBlock({ block }: { block: ContentBlockView }): React.ReactNode {
     );
   }
 
-  const imageOnRight = block.layout === "IMAGEN_DERECHA";
+  const imageOnRight = layout === "IMAGEN_DERECHA";
   return (
-    <div className="grid overflow-hidden rounded-2xl border border-line bg-white md:grid-cols-2 md:items-center">
+    <div className="grid grid-cols-1 overflow-hidden rounded-2xl border border-line bg-white md:grid-cols-2 md:items-center">
       <img
         src={block.imageUrl}
-        alt={alt}
+        alt={blockAlt(block)}
         loading="lazy"
         decoding="async"
         className={`aspect-square w-full bg-white object-contain ${imageOnRight ? "md:order-2" : ""}`}
       />
-      <div className="p-6 sm:p-8 lg:p-12">
+      <div className="min-w-0 p-6 sm:p-8 lg:p-12">
         <BlockText block={block} centered={false} />
       </div>
     </div>
@@ -82,14 +142,8 @@ function GridBlocks({ blocks }: { blocks: ContentBlockView[] }): React.ReactNode
   return (
     <ul className={`grid gap-4 ${gridColumnsClass(blocks.length)}`}>
       {blocks.map((block) => (
-        <li key={block.id} className="overflow-hidden rounded-2xl border border-line bg-white">
-          <img
-            src={block.imageUrl}
-            alt={block.imageAlt ?? block.title ?? ""}
-            loading="lazy"
-            decoding="async"
-            className="aspect-square w-full object-cover"
-          />
+        <li key={block.id} className="min-w-0 overflow-hidden rounded-2xl border border-line bg-white">
+          <img src={block.imageUrl} alt={blockAlt(block)} loading="lazy" decoding="async" className="aspect-square w-full object-cover" />
           {(block.title || block.body) && (
             <div className="p-4 wrap-break-word">
               {block.title && <h3 className="font-bold leading-snug text-ink">{block.title}</h3>}
@@ -102,12 +156,54 @@ function GridBlocks({ blocks }: { blocks: ContentBlockView[] }): React.ReactNode
   );
 }
 
+function CarouselBlocks({ blocks }: { blocks: ContentBlockView[] }): React.ReactNode {
+  return (
+    <div
+      role="region"
+      aria-roledescription="carrusel"
+      aria-label="Galería de imágenes del producto. Desliza para ver más."
+      tabIndex={0}
+      className="relative snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth rounded-2xl pb-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+    >
+      <ul className="flex gap-4">
+        {blocks.map((block, index) => (
+          <li
+            key={block.id}
+            aria-label={`${index + 1} de ${blocks.length}`}
+            className="relative isolate flex aspect-[4/5] w-[78%] min-w-0 shrink-0 snap-start flex-col justify-end overflow-hidden rounded-2xl border border-line bg-navy-900 sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]"
+          >
+            <img
+              src={block.imageUrl}
+              alt={blockAlt(block)}
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 -z-10 h-full w-full object-cover"
+            />
+            {(block.title || block.body) && (
+              <div className={`min-w-0 px-4 pt-16 pb-4 text-white wrap-break-word sm:px-5 sm:pb-5 ${OVERLAY_GRADIENT_CLASS}`}>
+                {block.title && <h3 className="text-lg leading-snug font-extrabold drop-shadow-sm">{block.title}</h3>}
+                {block.body && <p className="mt-1 line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-white/90">{block.body}</p>}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function BlockGroupView({ group }: { group: BlockGroup }): React.ReactNode {
+  if (group.kind === "grid") return <GridBlocks blocks={group.blocks} />;
+  if (group.kind === "carousel") return <CarouselBlocks blocks={group.blocks} />;
+  return <SingleBlock block={group.block} />;
+}
+
 function ContentBlockGroups({ blocks }: { blocks: ContentBlockView[] }): React.ReactNode {
   return (
     <div className="space-y-6">
-      {groupBlocks(blocks).map((group) =>
-        group.kind === "grid" ? <GridBlocks key={group.key} blocks={group.blocks} /> : <SingleBlock key={group.key} block={group.block} />
-      )}
+      {groupBlocks(blocks).map((group) => (
+        <BlockGroupView key={group.key} group={group} />
+      ))}
     </div>
   );
 }
@@ -159,7 +255,7 @@ function BrandAbout({ brand }: { brand: ProductBrandView }): React.ReactNode {
   );
 }
 
-export function ProductContentSections({ blocks, paragraphs, brand }: ProductContentSectionsProps): React.ReactNode {
+export function ProductContentSections({ blocks, paragraphs, brand, titles = EMPTY_TITLES }: ProductContentSectionsProps): React.ReactNode {
   const brandBlocks = blocks.filter((block) => block.source === "BRAND");
   const productBlocks = blocks.filter((block) => block.source === "PRODUCT");
   const hasBrandStory = brand !== null && (brand.bannerUrl !== null || brand.description !== null);
@@ -170,9 +266,9 @@ export function ProductContentSections({ blocks, paragraphs, brand }: ProductCon
       {showBrandSection && (
         <section id="desde-la-marca" aria-labelledby="desde-la-marca-titulo" className={PRODUCT_SECTION_CLASS}>
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 id="desde-la-marca-titulo" className={PRODUCT_SECTION_TITLE_CLASS}>
-              Desde la marca
-            </h2>
+            <div className="min-w-0">
+              <SectionHeading id="desde-la-marca-titulo" title={titles.content} fallbackTitle="Desde la marca" />
+            </div>
             {brand && (
               <Link
                 href={`/tienda?brand=${encodeURIComponent(brand.slug)}`}
@@ -194,9 +290,12 @@ export function ProductContentSections({ blocks, paragraphs, brand }: ProductCon
 
       {(productBlocks.length > 0 || paragraphs.length > 0) && (
         <section id="descripcion-del-producto" aria-labelledby="descripcion-del-producto-titulo" className={PRODUCT_SECTION_CLASS}>
-          <h2 id="descripcion-del-producto-titulo" className={PRODUCT_SECTION_TITLE_CLASS}>
-            Descripción del producto
-          </h2>
+          <SectionHeading
+            id="descripcion-del-producto-titulo"
+            title={titles.description}
+            fallbackTitle="Descripción del producto"
+            subtitle={titles.descriptionSubtitle}
+          />
           {productBlocks.length > 0 && (
             <div className="mt-5">
               <ContentBlockGroups blocks={productBlocks} />
