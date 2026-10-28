@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { copyFile, mkdir, open, readdir, rename, stat, unlink, writeFile } from "fs/promises";
+import { homedir } from "os";
 import { extname, isAbsolute, join, resolve } from "path";
 
 export interface UploadedImageFile {
@@ -52,7 +53,7 @@ export const MAX_VIDEO_BYTES = 50 * MEGABYTE;
 
 const SIGNATURE_BYTES = 64;
 
-const SEEDABLE_FILE_NAME = /^[a-f0-9-]{36}\.(jpg|png|webp|avif)$/;
+const SEEDABLE_FILE_NAME = /^[a-f0-9-]{36}\.(jpg|png|webp|avif|mp4)$/;
 const REMOVABLE_FILE_NAME = /^[a-f0-9-]{36}\.(jpg|png|webp|avif|pdf|mp4)$/;
 
 const NON_VIDEO_ISO_BRANDS = new Set([
@@ -132,12 +133,47 @@ const UPLOAD_POLICIES: Record<UploadKind, UploadPolicy> = {
   }
 };
 
-export function resolveUploadsDirectory(): string {
+const PERSISTENT_DIRECTORY_NAME = "limpiarte-uploads";
+
+function configuredUploadsDirectory(): string | null {
   const configured = process.env.UPLOADS_DIR;
-  if (configured && configured.length > 0) {
-    return isAbsolute(configured) ? resolve(configured) : resolve(process.cwd(), configured);
-  }
-  return resolve(process.cwd(), "uploads");
+  if (!configured || configured.length === 0) return null;
+  return isAbsolute(configured) ? resolve(configured) : resolve(process.cwd(), configured);
+}
+
+function toPosix(value: string): string {
+  return value.split("\\").join("/");
+}
+
+/// Rutas que el hosting reemplaza en cada despliegue: el directorio versionado del
+/// build y la raíz pública del sitio. Un archivo subido ahí se pierde al desplegar.
+function isReplacedOnDeploy(directory: string): boolean {
+  const normalized = toPosix(directory);
+  if (normalized.includes("/hbuilds/")) return true;
+  if (normalized.includes("/public_html/")) return true;
+  return normalized.startsWith(`${toPosix(process.cwd())}/`);
+}
+
+export function persistentUploadsDirectory(): string {
+  return join(homedir(), PERSISTENT_DIRECTORY_NAME);
+}
+
+export function resolveUploadsDirectory(): string {
+  const configured = configuredUploadsDirectory();
+  if (process.env.NODE_ENV !== "production") return configured ?? resolve(process.cwd(), "uploads");
+  if (configured && !isReplacedOnDeploy(configured)) return configured;
+  return persistentUploadsDirectory();
+}
+
+/// Directorio del que hay que rescatar archivos la primera vez que el almacenamiento
+/// se reubica: lo que el panel subió antes de este cambio vive ahí.
+export function legacyUploadsDirectory(): string | null {
+  if (process.env.NODE_ENV !== "production") return null;
+  const configured = configuredUploadsDirectory();
+  if (!configured) return null;
+  if (!isReplacedOnDeploy(configured)) return null;
+  if (configured === resolveUploadsDirectory()) return null;
+  return configured;
 }
 
 export function resolveIncomingDirectory(): string {
@@ -199,6 +235,7 @@ export class UploadStorageService implements OnModuleInit {
     await mkdir(this.incomingDirectory, { recursive: true });
     this.logger.log(`Almacenamiento de archivos en ${this.directory}`);
     await this.clearIncoming();
+    await this.rescueLegacyUploads();
     await this.seedBundledImages();
   }
 
@@ -210,6 +247,43 @@ export class UploadStorageService implements OnModuleInit {
       return;
     }
     for (const name of names) await discard(join(this.incomingDirectory, name));
+  }
+
+  /// Mueve a la ruta persistente lo que quedó en la ruta que el despliegue reemplaza.
+  /// Se ejecuta en cada arranque y es idempotente: lo que ya existe no se pisa.
+  private async rescueLegacyUploads(): Promise<void> {
+    const legacy = legacyUploadsDirectory();
+    if (!legacy) return;
+
+    let names: string[];
+    try {
+      names = await readdir(legacy);
+    } catch {
+      return;
+    }
+
+    let rescued = 0;
+
+    for (const name of names) {
+      if (!REMOVABLE_FILE_NAME.test(name)) continue;
+
+      const target = join(this.directory, name);
+      try {
+        await stat(target);
+        continue;
+      } catch {
+        void 0;
+      }
+
+      try {
+        await copyFile(join(legacy, name), target);
+        rescued += 1;
+      } catch (error) {
+        this.logger.warn(`No se pudo rescatar ${name}: ${(error as Error).message}`);
+      }
+    }
+
+    if (rescued > 0) this.logger.log(`Archivos rescatados de ${legacy}: ${rescued}`);
   }
 
   private async seedBundledImages(): Promise<void> {

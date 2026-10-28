@@ -12,7 +12,6 @@ coverage/
 apps/api/src/generated/
 *.tsbuildinfo
 apps/api/uploads/.incoming/
-apps/api/uploads/*.mp4
 apps/api/uploads/*.pdf
 
 
