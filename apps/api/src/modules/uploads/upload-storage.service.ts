@@ -145,8 +145,6 @@ function toPosix(value: string): string {
   return value.split("\\").join("/");
 }
 
-/// Rutas que el hosting reemplaza en cada despliegue: el directorio versionado del
-/// build y la raíz pública del sitio. Un archivo subido ahí se pierde al desplegar.
 function isReplacedOnDeploy(directory: string): boolean {
   const normalized = toPosix(directory);
   if (normalized.includes("/hbuilds/")) return true;
@@ -165,8 +163,6 @@ export function resolveUploadsDirectory(): string {
   return persistentUploadsDirectory();
 }
 
-/// Directorio del que hay que rescatar archivos la primera vez que el almacenamiento
-/// se reubica: lo que el panel subió antes de este cambio vive ahí.
 export function legacyUploadsDirectory(): string | null {
   if (process.env.NODE_ENV !== "production") return null;
   const configured = configuredUploadsDirectory();
@@ -249,8 +245,6 @@ export class UploadStorageService implements OnModuleInit {
     for (const name of names) await discard(join(this.incomingDirectory, name));
   }
 
-  /// Mueve a la ruta persistente lo que quedó en la ruta que el despliegue reemplaza.
-  /// Se ejecuta en cada arranque y es idempotente: lo que ya existe no se pisa.
   private async rescueLegacyUploads(): Promise<void> {
     const legacy = legacyUploadsDirectory();
     if (!legacy) return;
